@@ -22,7 +22,7 @@ export async function GET() {
       timestamp: new Date().toISOString(),
       database: {
         connected: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error'
       }
     }, { status: 503 })
   }

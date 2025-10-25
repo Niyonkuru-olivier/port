@@ -12,14 +12,7 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
     }
   },
   // Production optimizations
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  // Connection pooling settings
-  __internal: {
-    engine: {
-      connectTimeout: 60000, // 60 seconds
-      queryTimeout: 30000,   // 30 seconds
-    }
-  }
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error']
 })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma

@@ -76,7 +76,7 @@ export async function validateUser(email: string, password: string, role: string
     }
   } catch (error) {
     console.error('Validation error:', error)
-    console.error('Error details:', error.message)
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error')
     return { success: false, message: 'Authentication failed' }
   }
 }
