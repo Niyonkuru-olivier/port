@@ -1,0 +1,55 @@
+.container {
+    padding: 20px;
+  }
+  
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  .tableContainer {
+    overflow-x: auto;
+    border-radius: 4px;
+  }
+  
+  .fullWidthTable {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .fullWidthTable th, .fullWidthTable td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+  }
+  
+  .noData {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+    font-style: italic;
+  }
+  
+  .searchBar {
+    width: 300px;
+    margin-bottom: 20px;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+  }
+  
+  .actions button {
+    margin-right: 8px;
+    padding: 4px 6px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  
+  .actions button:hover {
+    color: #4361ee;
+  }
+  

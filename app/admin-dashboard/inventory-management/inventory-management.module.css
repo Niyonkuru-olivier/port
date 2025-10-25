@@ -1,0 +1,37 @@
+.inventory-management {
+    padding: 20px;
+  }
+  
+  button {
+    margin-bottom: 16px;
+  }
+  
+  .search-field {
+    width: 300px;
+    margin-bottom: 20px;
+    display: block;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  th, td {
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .low-stock {
+    color: red;
+    font-weight: bold;
+  }
+  
+  .ok-stock {
+    color: green;
+  }
+  

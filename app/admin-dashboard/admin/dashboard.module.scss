@@ -1,0 +1,171 @@
+:root {
+    --primary: #4361ee;
+    --secondary: #3f37c9;
+    --danger: #f72585;
+    --success: #4cc9f0;
+    --warning: #f8961e;
+    --light: #f8f9fa;
+    --dark: #212529;
+  }
+  
+  /* Main Content Styles */
+  .mainContent {
+    padding: 20px;
+    background-color: #f5f7fa;
+  }
+  
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  .header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #212529;
+  }
+  
+  .headerActions {
+    position: relative;
+  }
+  
+  .notificationBtn {
+    position: relative;
+  }
+  
+  .badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: #f72585;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Stats Cards */
+  .statsContainer {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 24px;
+    margin-bottom: 20px;
+  }
+  
+  .statCard {
+    border-radius: 16px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    min-height: 180px;
+    padding: 2.5rem 2rem;
+    font-size: 1.35rem;
+    box-shadow: 0 2px 8px rgba(67, 97, 238, 0.08), 0 1.5px 4px rgba(0,0,0,0.03);
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  
+  .statCard:hover {
+    transform: translateY(-8px) scale(1.03);
+    box-shadow: 0 16px 32px rgba(67, 97, 238, 0.18), 0 3px 8px rgba(0,0,0,0.06);
+    border-color: var(--primary);
+  }
+  
+  .statCardWarning {
+    border-left: 6px solid var(--warning);
+  }
+  
+  .cardHeader {
+    padding-bottom: 18px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .cardContent {
+    padding-top: 24px;
+  }
+  
+  .cardValue {
+    font-size: 2.6rem;
+    font-weight: bold;
+    color: #212529;
+    margin: 10px 0;
+  }
+  
+  .cardSubtext {
+    font-size: 1.1rem;
+    color: #6c757d;
+  }
+  
+  /* Inventory and Transactions Cards */
+  .inventoryCard, .transactionsCard {
+    margin-bottom: 24px;
+    border-radius: 12px;
+  }
+  
+  .cardActions {
+    display: flex;
+    gap: 10px;
+  }
+  
+  /* Table Styles */
+  .table {
+    width: 100%;
+  }
+  
+  .tableHeaderRow {
+    background-color: #f8f9fa;
+  }
+  
+  .lowStock {
+    color: var(--warning);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  
+  .addTransaction {
+    color: var(--success);
+    font-weight: 500;
+  }
+  
+  .removeTransaction {
+    color: var(--danger);
+    font-weight: 500;
+  }
+  
+  /* Responsive Styles */
+  @media (max-width: 900px) {
+    .statsContainer {
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .statCard {
+      min-height: 140px;
+      padding: 1.5rem 1rem;
+    }
+  }
+  
+  @media (max-width: 600px) {
+    .statsContainer {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .statCard {
+      min-width: unset;
+      width: 100%;
+      padding: 1rem 0.5rem;
+    }
+    .cardActions {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+  

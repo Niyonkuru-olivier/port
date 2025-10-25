@@ -1,0 +1,104 @@
+:host {
+    display: block;
+    width: 100%;
+    max-width: 600px;
+  }
+  
+  mat-dialog-content {
+    padding: 20px;
+  }
+  
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  mat-form-field {
+    width: 100%;
+  }
+  
+  .items-selection {
+    margin-top: 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 16px;
+  }
+  
+  .items-selection h3 {
+    margin: 0 0 16px 0;
+    color: rgba(0, 0, 0, 0.87);
+  }
+  
+  mat-selection-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 8px;
+  }
+  
+  mat-list-option {
+    height: 40px;
+  }
+  
+  mat-dialog-actions {
+    padding: 16px;
+    margin: 0;
+    border-top: 1px solid #e0e0e0;
+  }
+  
+  button {
+    min-width: 100px;
+  }
+  
+  @media (max-width: 600px) {
+    :host {
+      width: 100%;
+    }
+  
+    mat-dialog-content {
+      padding: 16px;
+    }
+  
+    .items-selection {
+      padding: 12px;
+    }
+  }
+  
+  .full-width {
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  
+  .half-width {
+    width: calc(50% - 8px);
+    margin-bottom: 16px;
+  }
+  
+  .date-range-group {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .items-section {
+    margin-top: 16px;
+  }
+  
+  .select-all-checkbox {
+    margin-bottom: 16px;
+    display: block;
+  }
+  
+  .items-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 8px;
+  }
+  
+  .item-checkbox {
+    display: block;
+    margin: 8px 0;
+  }
+  

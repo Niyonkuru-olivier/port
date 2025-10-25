@@ -1,0 +1,60 @@
+<h2 mat-dialog-title>Generate Report</h2>
+
+<mat-dialog-content>
+  <form>
+    <mat-form-field>
+      <mat-label>Report Type</mat-label>
+      <mat-select [(ngModel)]="report.type" name="type" (selectionChange)="onTypeChange()">
+        <mat-option value="custom">Daily</mat-option>
+        <!--<mat-option value="daily">Daily</mat-option>-->
+        <mat-option value="weekly">Weekly</mat-option>
+        <mat-option value="monthly">Monthly</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field>
+      <mat-label>Format</mat-label>
+      <mat-select [(ngModel)]="report.format" name="format">
+        <mat-option value="pdf">PDF</mat-option>
+        <mat-option value="xlsx">Excel</mat-option>
+        <mat-option value="csv">CSV</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <div *ngIf="showCustomRange">
+      <mat-form-field>
+        <mat-label>Start Date</mat-label>
+        <input matInput [matDatepicker]="startPicker" [(ngModel)]="report.startDate" name="startDate">
+        <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+        <mat-datepicker #startPicker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field>
+        <mat-label>End Date</mat-label>
+        <input matInput [matDatepicker]="endPicker" [(ngModel)]="report.endDate" name="endDate">
+        <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+        <mat-datepicker #endPicker></mat-datepicker>
+      </mat-form-field>
+    </div>
+
+    <div class="items-selection">
+      <h3>Select Items</h3>
+      <mat-checkbox [(ngModel)]="selectAll" (change)="toggleSelectAll()">
+        Select All
+      </mat-checkbox>
+
+      <mat-selection-list>
+        <mat-list-option *ngFor="let item of items" 
+                        [selected]="selectedItems.includes(item)"
+                        (click)="toggleItemSelection(item)">
+          {{item}}
+        </mat-list-option>
+      </mat-selection-list>
+    </div>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Cancel</button>
+  <button mat-raised-button color="primary" (click)="generateReport()">Generate</button>
+</mat-dialog-actions>

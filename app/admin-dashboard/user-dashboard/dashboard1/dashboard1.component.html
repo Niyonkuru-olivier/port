@@ -1,0 +1,71 @@
+<div class="main-content">
+    <!-- Header -->
+    <div class="header">
+      <h1>User Dashboard Overview</h1>
+      <div class="header-actions">
+        <button mat-icon-button class="notification-btn">
+          <mat-icon>notifications</mat-icon>
+          <span class="badge" *ngIf="todaysTransactions > 0">{{ todaysTransactions }}</span>
+        </button>
+      </div>
+    </div>
+  
+    <!-- Stats Cards -->
+    <div class="stats-container dashboard-cards">
+      <a mat-card class="stat-card card" (click)="goTo('inventory-items')">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>inventory</mat-icon>
+          <mat-card-title>Total Inventory Items</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="card-value">{{ totalInventoryItems }}</div>
+          <div class="card-subtext">Available</div>
+        </mat-card-content>
+      </a>
+  
+      <a mat-card class="stat-card card" (click)="goTo('asset-items')">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>inventory_2</mat-icon>
+          <mat-card-title>Total Asset Items</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="card-value">{{ totalAssetItems }}</div>
+          <div class="card-subtext">Available</div>
+        </mat-card-content>
+      </a>
+  
+      <a mat-card class="stat-card card warning" (click)="goTo('low-inventory-items')">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>warning</mat-icon>
+          <mat-card-title>Low Inventory Items</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="card-value">{{ lowInventoryStock }}</div>
+          <div class="card-subtext">Needs attention</div>
+        </mat-card-content>
+      </a>
+  
+      <a mat-card class="stat-card card warning" (click)="goTo('low-asset-items')">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>warning</mat-icon>
+          <mat-card-title>Low Asset Items</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="card-value">{{ lowAssetStock }}</div>
+          <div class="card-subtext">Needs attention</div>
+        </mat-card-content>
+      </a>
+  
+      <a mat-card class="stat-card card" (click)="goTo('transactions')">
+        <mat-card-header>
+          <mat-icon mat-card-avatar>receipt</mat-icon>
+          <mat-card-title>Today's Transactions</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="card-value">{{ todaysTransactions }}</div>
+          <div class="card-subtext">Movements</div>
+        </mat-card-content>
+      </a>
+    </div>
+  </div>
+  

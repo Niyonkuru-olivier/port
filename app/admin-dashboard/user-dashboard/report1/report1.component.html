@@ -1,0 +1,88 @@
+<div class="report1-container">
+    <h2>Download Reports</h2>
+  
+    <!-- Inventory Card -->
+    <mat-card class="report-card">
+      <mat-card-title>Inventory Item Reports</mat-card-title>
+      <mat-card-content>
+        <p>Select Inventory items to include in the report:</p>
+  
+        <div *ngIf="isLoadingInventory" class="loading-container">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p>Loading inventory items...</p>
+        </div>
+  
+        <div *ngIf="inventoryError" class="error-message">
+          {{ inventoryError }}
+          <button mat-button color="primary" (click)="fetchInventoryItems()">Retry</button>
+        </div>
+  
+        <div *ngIf="!isLoadingInventory && !inventoryError">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Search Inventory</mat-label>
+            <input matInput [(ngModel)]="inventorySearchTerm" placeholder="Type to search..." />
+          </mat-form-field>
+  
+          <mat-checkbox [(ngModel)]="selectAllInventory" (change)="toggleSelectAll('inventory')">
+            Select All
+          </mat-checkbox>
+  
+          <div class="item-list">
+            <mat-checkbox
+              *ngFor="let item of filteredInventoryItems()"
+              [checked]="selectedInventoryIds.includes(item.id)"
+              (change)="toggleItemSelection('inventory', item.id)">
+              {{ item.name }}
+            </mat-checkbox>
+          </div>
+  
+          <button mat-raised-button color="primary" (click)="generateInventoryReport()">
+            Generate Inventory Report
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  
+    <!-- Asset Card -->
+    <mat-card class="report-card">
+      <mat-card-title>Asset Item Reports</mat-card-title>
+      <mat-card-content>
+        <p>Select Asset items to include in the report:</p>
+  
+        <div *ngIf="isLoadingAssets" class="loading-container">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p>Loading asset items...</p>
+        </div>
+  
+        <div *ngIf="assetError" class="error-message">
+          {{ assetError }}
+          <button mat-button color="primary" (click)="fetchAssetItems()">Retry</button>
+        </div>
+  
+        <div *ngIf="!isLoadingAssets && !assetError">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-label>Search Assets</mat-label>
+            <input matInput [(ngModel)]="assetSearchTerm" placeholder="Type to search..." />
+          </mat-form-field>
+  
+          <mat-checkbox [(ngModel)]="selectAllAssets" (change)="toggleSelectAll('asset')">
+            Select All
+          </mat-checkbox>
+  
+          <div class="item-list">
+            <mat-checkbox
+              *ngFor="let item of filteredAssetItems()"
+              [checked]="selectedAssetIds.includes(item.id)"
+              (change)="toggleItemSelection('asset', item.id)">
+              {{ item.name }}
+            </mat-checkbox>
+          </div>
+  
+          <button mat-raised-button color="accent" (click)="generateAssetReport()">
+            Generate Asset Report
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+  

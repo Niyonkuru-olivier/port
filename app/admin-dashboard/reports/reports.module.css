@@ -1,0 +1,78 @@
+.reportsContainer {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    height: 100%;
+  }
+  
+  .reportsHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  
+  .reportsHeader h2 {
+    margin: 0;
+    color: #333;
+  }
+  
+  .reportControls {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  
+  .reportControls select,
+  .reportControls input[type="date"] {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+  }
+  
+  .reportControls button {
+    padding: 0 24px;
+    height: 40px;
+    border-radius: 4px;
+    border: none;
+    background-color: #4361ee;
+    color: white;
+    cursor: pointer;
+  }
+  
+  .tableContainer {
+    flex: 1;
+    overflow: auto;
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  th, td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+    text-align: left;
+  }
+  
+  tr:hover {
+    background-color: #f8f8f8;
+  }
+  
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+  }
+  

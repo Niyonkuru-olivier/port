@@ -1,0 +1,61 @@
+:host {
+    display: block;
+    padding: 1rem;
+    background-color: #f5f5f5;
+  }
+  
+  .search-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 1rem;
+  
+    input {
+      padding: 0.5rem;
+      width: 250px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 0.9rem;
+    }
+  }
+  
+  .mat-elevation-z8 {
+    background-color: white;
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  
+  .table-header {
+    font-weight: bold;
+  }
+  
+  .actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+  
+    button {
+      min-width: 32px;
+      height: 32px;
+      padding: 0;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .search-bar {
+      justify-content: center;
+  
+      input {
+        width: 100%;
+      }
+    }
+  
+    .actions {
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+  }
+  
