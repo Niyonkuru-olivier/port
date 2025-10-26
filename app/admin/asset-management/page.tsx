@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import '../../admin-dashboard/asset-management/asset-management.component.scss'
+import '../../admin-dashboard/asset-management/add-item-dialog/add-item-dialog.component.scss'
 
 interface Asset {
   id: number
@@ -21,11 +23,13 @@ interface Asset {
 
 export default function AdminAssetManagement() {
   const [assets, setAssets] = useState<Asset[]>([])
+  const [filteredAssets, setFilteredAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null)
   const [newAsset, setNewAsset] = useState({
     number: '',
     name: '',
@@ -66,7 +70,12 @@ export default function AdminAssetManagement() {
       const response = await fetch('/api/assets')
       if (response.ok) {
         const data = await response.json()
-        setAssets(data)
+        const computed = data.map((asset: Asset) => ({
+          ...asset,
+          total_price: asset.unit_price * asset.balance_qty,
+        }))
+        setAssets(computed)
+        setFilteredAssets(computed)
       }
     } catch (error) {
       console.error('Error loading assets:', error)
@@ -75,10 +84,22 @@ export default function AdminAssetManagement() {
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    router.push('/login')
+  const filterAssets = (query: string) => {
+    setSearchQuery(query)
+    const lower = query.toLowerCase()
+    let filtered = assets.filter(
+      (asset) =>
+        asset.name.toLowerCase().includes(lower) ||
+        asset.number.toLowerCase().includes(lower) ||
+        asset.sku.toLowerCase().includes(lower) ||
+        asset.description.toLowerCase().includes(lower)
+    )
+
+    if (showLowStockOnly) {
+      filtered = filtered.filter((a) => a.balance_qty <= (a.threshold || 10))
+    }
+
+    setFilteredAssets(filtered)
   }
 
   const handleAddAsset = async () => {
@@ -113,18 +134,26 @@ export default function AdminAssetManagement() {
     }
   }
 
-  const filteredAssets = assets.filter(asset => {
-    const matchesSearch = asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         asset.number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         asset.sku.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesLowStock = !showLowStockOnly || asset.balance_qty <= asset.threshold
-    return matchesSearch && matchesLowStock
-  })
+  const editAsset = (asset: Asset) => {
+    setEditingAsset(asset)
+    setNewAsset({
+      number: asset.number,
+      name: asset.name,
+      description: asset.description,
+      sku: asset.sku,
+      condition: asset.condition,
+      qty_in: asset.qty_in,
+      qty_out: asset.qty_out,
+      unit_price: asset.unit_price,
+      threshold: asset.threshold
+    })
+    setShowAddDialog(true)
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <div>Loading...</div>
       </div>
     )
   }
@@ -134,257 +163,208 @@ export default function AdminAssetManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Asset Management</h1>
-              <p className="text-gray-600">Admin Panel</p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/admin/dashboard" className="text-blue-600 hover:text-blue-800">
-                ← Back to Dashboard
-              </Link>
-              <span className="text-gray-700">Welcome, {user.email}</span>
-              <button
-                onClick={handleLogout}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="container">
+      <div className="header">
+        <h1>Asset Management</h1>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <div className="px-4 py-5 sm:px-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">Assets</h3>
-                <button 
-                  onClick={() => setShowAddDialog(true)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                >
-                  Add New Asset
-                </button>
-              </div>
-              
-              <div className="flex gap-4 mb-4">
-                <input
-                  type="text"
-                  placeholder="Search assets..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 p-2 border border-gray-300 rounded-md"
-                />
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={showLowStockOnly}
-                    onChange={(e) => setShowLowStockOnly(e.target.checked)}
-                    className="mr-2"
-                  />
-                  Show Low Stock Only
-                </label>
-              </div>
-            </div>
-            
-            <div className="border-t border-gray-200">
-              {filteredAssets.length === 0 ? (
-                <div className="px-4 py-5 sm:px-6 text-center">
-                  <p className="text-gray-500">No assets found.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Asset Number
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Name
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          SKU
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Condition
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Balance Qty
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Unit Price
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredAssets.map((asset) => (
-                        <tr key={asset.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {asset.number}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {asset.name}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {asset.sku}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {asset.condition}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {asset.balance_qty}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {asset.unit_price} RWF
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {asset.balance_qty <= asset.threshold ? (
-                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                                Low Stock
-                              </span>
-                            ) : (
-                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                Available
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button className="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
-                            <button className="text-red-600 hover:text-red-900">Delete</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* Search */}
+        <div className="search-bar">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => filterAssets(e.target.value)}
+            placeholder="Search by name, number, SKU, or description"
+          />
         </div>
-      </main>
+
+        <button className="add-btn" onClick={() => setShowAddDialog(true)}>
+          + Add Asset Item
+        </button>
+      </div>
+
+      {filteredAssets.length > 0 ? (
+        <div className="table-container">
+          <table className="full-width-table">
+            <thead>
+              <tr>
+                <th>Asset Number</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>SKU</th>
+                <th>Condition</th>
+                <th>Qty In</th>
+                <th>Qty Out</th>
+                <th>Balance Qty</th>
+                <th>Status</th>
+                <th>Unit Price</th>
+                <th>Total Price</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAssets.map((asset) => (
+                <tr key={asset.id}>
+                  <td>{asset.number}</td>
+                  <td>{asset.name}</td>
+                  <td>{asset.description}</td>
+                  <td>{asset.sku}</td>
+                  <td>{asset.condition}</td>
+                  <td>{asset.qty_in}</td>
+                  <td>{asset.qty_out}</td>
+                  <td>{asset.balance_qty}</td>
+                  <td>
+                    {asset.balance_qty <= asset.threshold ? (
+                      <span style={{ color: "red", fontWeight: "bold" }}>
+                        Low Stock
+                      </span>
+                    ) : (
+                      <span style={{ color: "green" }}>OK</span>
+                    )}
+                  </td>
+                  <td>{asset.unit_price} RWF</td>
+                  <td>{asset.unit_price * asset.balance_qty} RWF</td>
+                  <td>
+                    <button
+                      className="edit-btn"
+                      onClick={() => editAsset(asset)}
+                    >
+                      ✎
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="no-data">
+          No assets found. Click "Add Asset" to create your first asset.
+        </div>
+      )}
 
       {/* Add Asset Dialog */}
       {showAddDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Add New Asset</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Asset Number *</label>
+        <div className="dialog-overlay">
+          <div className="dialog-container" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2>{editingAsset ? 'Edit Asset' : 'Add New Asset'}</h2>
+
+            <form className="dialog-form" onSubmit={(e) => e.preventDefault()}>
+              <div className="full-width">
+                <label>Asset Number</label>
                 <input
                   type="text"
                   value={newAsset.number}
                   onChange={(e) => setNewAsset({...newAsset, number: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                   placeholder="Enter asset number"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Asset Name *</label>
+
+              <div className="full-width">
+                <label>Asset Name</label>
                 <input
                   type="text"
                   value={newAsset.name}
                   onChange={(e) => setNewAsset({...newAsset, name: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                   placeholder="Enter asset name"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">SKU *</label>
+
+              <div className="full-width">
+                <label>SKU (Code)</label>
                 <input
                   type="text"
                   value={newAsset.sku}
                   onChange={(e) => setNewAsset({...newAsset, sku: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
                   placeholder="Enter SKU"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
-                <textarea
-                  value={newAsset.description}
-                  onChange={(e) => setNewAsset({...newAsset, description: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  rows={3}
-                  placeholder="Enter description"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Quantity In *</label>
-                <input
-                  type="number"
-                  value={newAsset.qty_in}
-                  onChange={(e) => setNewAsset({...newAsset, qty_in: parseInt(e.target.value) || 0})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  min="0"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Unit Price *</label>
-                <input
-                  type="number"
-                  value={newAsset.unit_price}
-                  onChange={(e) => setNewAsset({...newAsset, unit_price: parseFloat(e.target.value) || 0})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  min="0"
-                  step="0.01"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Threshold</label>
-                <input
-                  type="number"
-                  value={newAsset.threshold}
-                  onChange={(e) => setNewAsset({...newAsset, threshold: parseInt(e.target.value) || 5})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  min="1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Condition</label>
+
+              <div className="full-width">
+                <label>Condition</label>
                 <select
                   value={newAsset.condition}
                   onChange={(e) => setNewAsset({...newAsset, condition: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  required
                 >
                   <option value="Fair">Fair</option>
                   <option value="Good">Good</option>
                   <option value="Very Good">Very Good</option>
                 </select>
               </div>
-            </div>
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setShowAddDialog(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
+
+              <div className="full-width">
+                <label>Description</label>
+                <textarea
+                  value={newAsset.description}
+                  onChange={(e) => setNewAsset({...newAsset, description: e.target.value})}
+                  rows={3}
+                  placeholder="Enter description"
+                />
+              </div>
+
+              <div className="full-width">
+                <label>Quantity In</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={newAsset.qty_in}
+                  onChange={(e) => setNewAsset({...newAsset, qty_in: parseInt(e.target.value) || 0})}
+                  required
+                />
+              </div>
+
+              <div className="full-width">
+                <label>Stock Threshold</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={newAsset.threshold}
+                  onChange={(e) => setNewAsset({...newAsset, threshold: parseInt(e.target.value) || 5})}
+                  required
+                />
+              </div>
+
+              <div className="full-width">
+                <label>Unit Price (RWF)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={newAsset.unit_price}
+                  onChange={(e) => setNewAsset({...newAsset, unit_price: parseFloat(e.target.value) || 0})}
+                  required
+                />
+              </div>
+            </form>
+
+            <div className="dialog-actions">
+              <button type="button" onClick={() => {
+                setShowAddDialog(false)
+                setEditingAsset(null)
+                setNewAsset({
+                  number: '',
+                  name: '',
+                  description: '',
+                  sku: '',
+                  condition: 'Good',
+                  qty_in: 0,
+                  qty_out: 0,
+                  unit_price: 0,
+                  threshold: 5
+                })
+              }}>
                 Cancel
               </button>
               <button
+                type="button"
+                className="primary"
                 onClick={handleAddAsset}
                 disabled={!newAsset.number || !newAsset.name || !newAsset.sku || newAsset.qty_in <= 0 || newAsset.unit_price <= 0}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
               >
-                Add Asset
+                {editingAsset ? 'Update' : 'Save'}
               </button>
             </div>
           </div>

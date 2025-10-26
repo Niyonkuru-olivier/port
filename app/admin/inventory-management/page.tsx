@@ -3,37 +3,39 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import '../../admin-dashboard/asset-management/asset-management.component.scss'
 
 interface InventoryItem {
   id: number
+  number: string
   name: string
   description: string
-  qtyin: number
-  qtyout: number
-  balanceqty: number
-  unitprice: number
-  totalprice: number
-  threshold: number
   condition: string
-  number: string
+  qty_in: number
+  qty_out: number
+  balance_qty: number
+  unit_price: number
+  total_price: number
+  threshold: number
 }
 
 export default function AdminInventoryManagement() {
   const [inventory, setInventory] = useState<InventoryItem[]>([])
+  const [filteredInventory, setFilteredInventory] = useState<InventoryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
   const [newItem, setNewItem] = useState({
     name: '',
     description: '',
-    qtyin: 0,
-    qtyout: 0,
-    unitprice: 0,
-    threshold: 5,
     condition: 'Good',
-    number: ''
+    qty_in: 0,
+    qty_out: 0,
+    unit_price: 0,
+    threshold: 5
   })
   const router = useRouter()
 
@@ -64,7 +66,17 @@ export default function AdminInventoryManagement() {
       const response = await fetch('/api/inventory')
       if (response.ok) {
         const data = await response.json()
-        setInventory(data)
+        const computed = data.map((item: any, index: number) => ({
+          ...item,
+          number: item.number || `INV-${String(index + 1).padStart(4, '0')}`, // Auto-generate item number
+          qty_in: item.qtyin || item.qty_in || 0,
+          qty_out: item.qtyout || item.qty_out || 0,
+          balance_qty: (item.qtyin || item.qty_in || 0) - (item.qtyout || item.qty_out || 0),
+          unit_price: item.unitprice || item.unit_price || 0,
+          total_price: (item.unitprice || item.unit_price || 0) * ((item.qtyin || item.qty_in || 0) - (item.qtyout || item.qty_out || 0)),
+        }))
+        setInventory(computed)
+        setFilteredInventory(computed)
       }
     } catch (error) {
       console.error('Error loading inventory:', error)
@@ -73,32 +85,52 @@ export default function AdminInventoryManagement() {
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    router.push('/login')
+  const filterInventory = (query: string) => {
+    setSearchQuery(query)
+    const lower = query.toLowerCase()
+    let filtered = inventory.filter(
+      (item) =>
+        item.name.toLowerCase().includes(lower) ||
+        item.number.toLowerCase().includes(lower) ||
+        item.description.toLowerCase().includes(lower)
+    )
+
+    if (showLowStockOnly) {
+      filtered = filtered.filter((a) => a.balance_qty <= (a.threshold || 10))
+    }
+
+    setFilteredInventory(filtered)
   }
 
   const handleAddItem = async () => {
     try {
+      // Auto-generate item number
+      const itemNumber = `INV-${String(inventory.length + 1).padStart(4, '0')}`
+      
       const response = await fetch('/api/inventory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newItem)
+        body: JSON.stringify({
+          ...newItem,
+          number: itemNumber,
+          qtyin: newItem.qty_in,
+          qtyout: newItem.qty_out,
+          unitprice: newItem.unit_price,
+        })
       })
 
       if (response.ok) {
         await loadInventory()
         setShowAddDialog(false)
+        setEditingItem(null)
         setNewItem({
           name: '',
           description: '',
-          qtyin: 0,
-          qtyout: 0,
-          unitprice: 0,
-          threshold: 5,
           condition: 'Good',
-          number: ''
+          qty_in: 0,
+          qty_out: 0,
+          unit_price: 0,
+          threshold: 5
         })
         alert('Item added successfully!')
       } else {
@@ -110,17 +142,24 @@ export default function AdminInventoryManagement() {
     }
   }
 
-  const filteredInventory = inventory.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesLowStock = !showLowStockOnly || item.balanceqty <= item.threshold
-    return matchesSearch && matchesLowStock
-  })
+  const editItem = (item: InventoryItem) => {
+    setEditingItem(item)
+    setNewItem({
+      name: item.name,
+      description: item.description,
+      condition: item.condition,
+      qty_in: item.qty_in,
+      qty_out: item.qty_out,
+      unit_price: item.unit_price,
+      threshold: item.threshold
+    })
+    setShowAddDialog(true)
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <div>Loading...</div>
       </div>
     )
   }
@@ -130,245 +169,205 @@ export default function AdminInventoryManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
-              <p className="text-gray-600">Admin Panel</p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/admin/dashboard" className="text-blue-600 hover:text-blue-800">
-                ← Back to Dashboard
-              </Link>
-              <span className="text-gray-700">Welcome, {user.email}</span>
-              <button
-                onClick={handleLogout}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="container">
+      <div className="header">
+        <h1>Inventory Management</h1>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <div className="px-4 py-5 sm:px-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">Inventory Items</h3>
-                <button 
-                  onClick={() => setShowAddDialog(true)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                >
-                  Add New Item
-                </button>
-              </div>
-              
-              <div className="flex gap-4 mb-4">
-                <input
-                  type="text"
-                  placeholder="Search inventory..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 p-2 border border-gray-300 rounded-md"
-                />
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={showLowStockOnly}
-                    onChange={(e) => setShowLowStockOnly(e.target.checked)}
-                    className="mr-2"
-                  />
-                  Show Low Stock Only
-                </label>
-              </div>
-            </div>
-            
-            <div className="border-t border-gray-200">
-              {filteredInventory.length === 0 ? (
-                <div className="px-4 py-5 sm:px-6 text-center">
-                  <p className="text-gray-500">No inventory items found.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Item Number
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Name
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Description
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Balance Qty
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Unit Price
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Total Price
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredInventory.map((item) => (
-                        <tr key={item.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {item.number || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {item.name}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-900">
-                            {item.description || 'No description'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {item.balanceqty}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {item.unitprice} RWF
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {item.totalprice} RWF
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {item.balanceqty <= item.threshold ? (
-                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                                Low Stock
-                              </span>
-                            ) : (
-                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                Available
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button className="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
-                            <button className="text-red-600 hover:text-red-900">Delete</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* Search */}
+        <div className="search-bar">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => filterInventory(e.target.value)}
+            placeholder="Search by name, number, or description"
+          />
         </div>
-      </main>
+
+        <button className="add-btn" onClick={() => setShowAddDialog(true)}>
+          + Add Inventory Item
+        </button>
+      </div>
+
+      {filteredInventory.length > 0 ? (
+        <div className="table-container">
+          <table className="full-width-table">
+            <thead>
+              <tr>
+                <th>Item Number</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Condition</th>
+                <th>Qty In</th>
+                <th>Qty Out</th>
+                <th>Balance Qty</th>
+                <th>Status</th>
+                <th>Unit Price</th>
+                <th>Total Price</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredInventory.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.number}</td>
+                  <td>{item.name}</td>
+                  <td>{item.description}</td>
+                  <td>{item.condition}</td>
+                  <td>{item.qty_in}</td>
+                  <td>{item.qty_out}</td>
+                  <td>{item.balance_qty}</td>
+                  <td>
+                    {item.balance_qty <= item.threshold ? (
+                      <span style={{ color: "red", fontWeight: "bold" }}>
+                        Low Stock
+                      </span>
+                    ) : (
+                      <span style={{ color: "green" }}>OK</span>
+                    )}
+                  </td>
+                  <td>{item.unit_price} RWF</td>
+                  <td>{item.unit_price * item.balance_qty} RWF</td>
+                  <td>
+                    <button
+                      className="edit-btn"
+                      onClick={() => editItem(item)}
+                    >
+                      ✎
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="no-data">
+          No inventory items found. Click "Add Inventory Item" to create your first item.
+        </div>
+      )}
 
       {/* Add Item Dialog */}
       {showAddDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Add New Inventory Item</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Item Number</label>
-                <input
-                  type="text"
-                  value={newItem.number}
-                  onChange={(e) => setNewItem({...newItem, number: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder="Enter item number"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Item Name *</label>
-                <input
-                  type="text"
-                  value={newItem.name}
-                  onChange={(e) => setNewItem({...newItem, name: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder="Enter item name"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
-                <textarea
-                  value={newItem.description}
-                  onChange={(e) => setNewItem({...newItem, description: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  rows={3}
-                  placeholder="Enter description"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Quantity In *</label>
-                <input
-                  type="number"
-                  value={newItem.qtyin}
-                  onChange={(e) => setNewItem({...newItem, qtyin: parseInt(e.target.value) || 0})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  min="0"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Unit Price *</label>
-                <input
-                  type="number"
-                  value={newItem.unitprice}
-                  onChange={(e) => setNewItem({...newItem, unitprice: parseFloat(e.target.value) || 0})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  min="0"
-                  step="0.01"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Threshold</label>
-                <input
-                  type="number"
-                  value={newItem.threshold}
-                  onChange={(e) => setNewItem({...newItem, threshold: parseInt(e.target.value) || 5})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                  min="1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Condition</label>
-                <select
-                  value={newItem.condition}
-                  onChange={(e) => setNewItem({...newItem, condition: e.target.value})}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                >
-                  <option value="Fair">Fair</option>
-                  <option value="Good">Good</option>
-                  <option value="Very Good">Very Good</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setShowAddDialog(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '8px',
+            width: '90%',
+            maxWidth: '500px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: '24px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+          }}>
+            <h2 style={{ marginTop: 0, marginBottom: '20px' }}>
+              {editingItem ? 'Edit Inventory Item' : 'Add New Inventory Item'}
+            </h2>
+            
+            <form>
+              <input
+                style={{ width: '100%', marginBottom: '16px', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+                placeholder="Item Name"
+                value={newItem.name}
+                onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+                required
+              />
+              
+              <textarea
+                style={{ width: '100%', marginBottom: '16px', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+                rows={3}
+                value={newItem.description}
+                onChange={(e) => setNewItem({...newItem, description: e.target.value})}
+                placeholder="Description"
+              />
+              
+              <select
+                style={{ width: '100%', marginBottom: '16px', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+                value={newItem.condition}
+                onChange={(e) => setNewItem({...newItem, condition: e.target.value})}
+                required
+              >
+                <option value="Fair">Fair</option>
+                <option value="Good">Good</option>
+                <option value="Very Good">Very Good</option>
+              </select>
+              
+              <input
+                style={{ width: '100%', marginBottom: '16px', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+                type="number"
+                min={0}
+                value={newItem.qty_in}
+                onChange={(e) => setNewItem({...newItem, qty_in: parseInt(e.target.value) || 0})}
+                placeholder="Quantity In"
+                required
+              />
+              
+              <input
+                style={{ width: '100%', marginBottom: '16px', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+                type="number"
+                min={0}
+                step="0.01"
+                value={newItem.unit_price}
+                onChange={(e) => setNewItem({...newItem, unit_price: parseFloat(e.target.value) || 0})}
+                placeholder="Unit Price"
+                required
+              />
+              
+              <input
+                style={{ width: '100%', marginBottom: '16px', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+                type="number"
+                min={1}
+                value={newItem.threshold}
+                onChange={(e) => setNewItem({...newItem, threshold: parseInt(e.target.value) || 5})}
+                placeholder="Reorder Threshold"
+                required
+              />
+            </form>
+            
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setShowAddDialog(false)
+                  setEditingItem(null)
+                  setNewItem({
+                    name: '',
+                    description: '',
+                    condition: 'Good',
+                    qty_in: 0,
+                    qty_out: 0,
+                    unit_price: 0,
+                    threshold: 5
+                  })
+                }}
+                style={{ padding: '8px 16px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: '#fff', cursor: 'pointer' }}
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleAddItem}
-                disabled={!newItem.name || newItem.qtyin <= 0 || newItem.unitprice <= 0}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+                disabled={!newItem.name || newItem.qty_in < 0 || newItem.unit_price < 0 || newItem.threshold < 1}
+                style={{ 
+                  backgroundColor: '#4361ee', 
+                  color: 'white', 
+                  padding: '8px 16px', 
+                  border: 'none', 
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
               >
-                Add Item
+                {editingItem ? 'Update' : 'Save'} Item
               </button>
             </div>
           </div>

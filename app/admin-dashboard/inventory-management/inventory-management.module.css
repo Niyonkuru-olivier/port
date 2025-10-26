@@ -2,7 +2,7 @@
     padding: 20px;
   }
   
-  button {
+  .inventory-management button {
     margin-bottom: 16px;
   }
   
@@ -16,12 +16,13 @@
     overflow-x: auto;
   }
   
-  table {
+  .table-container table {
     width: 100%;
     border-collapse: collapse;
   }
   
-  th, td {
+  .table-container th, 
+  .table-container td {
     padding: 8px;
     border-bottom: 1px solid #ddd;
   }
