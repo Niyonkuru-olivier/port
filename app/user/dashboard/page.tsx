@@ -73,6 +73,10 @@ export default function UserDashboard() {
     router.push(`/user/${route}`);
   };
 
+  const goToLowStock = (type: 'inventory' | 'assets') => {
+    router.push(`/user/${type}?lowStock=true`);
+  };
+
   if (loading) {
     return (
       <div className="main-content">
@@ -126,7 +130,7 @@ export default function UserDashboard() {
           </div>
         </div>
 
-        <div className="stat-card card warning" onClick={() => goTo('inventory')}>
+        <div className="stat-card card warning" onClick={() => goToLowStock('inventory')}>
           <div className="mat-card-header">
             <span className="material-icons">warning</span>
             <h3>Low Inventory Items</h3>
@@ -137,7 +141,7 @@ export default function UserDashboard() {
           </div>
         </div>
 
-        <div className="stat-card card warning" onClick={() => goTo('assets')}>
+        <div className="stat-card card warning" onClick={() => goToLowStock('assets')}>
           <div className="mat-card-header">
             <span className="material-icons">warning</span>
             <h3>Low Asset Items</h3>
@@ -149,6 +153,17 @@ export default function UserDashboard() {
         </div>
 
         <div className="stat-card card" onClick={() => goTo('reports')}>
+          <div className="mat-card-header">
+            <span className="material-icons">assessment</span>
+            <h3>Reports</h3>
+          </div>
+          <div className="mat-card-content">
+            <div className="card-value">Generate</div>
+            <div className="card-subtext">PDF/Excel/CSV</div>
+          </div>
+        </div>
+
+        <div className="stat-card card" onClick={() => goTo('transactions')}>
           <div className="mat-card-header">
             <span className="material-icons">receipt</span>
             <h3>Today's Transactions</h3>

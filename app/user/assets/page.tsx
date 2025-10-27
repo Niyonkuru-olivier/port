@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import EditAssetDialog from './EditAssetDialog'
 import '../../admin-dashboard/asset-management/asset-management.component.scss'
 
 interface Asset {
@@ -27,6 +28,7 @@ export default function UserAssets() {
   const [user, setUser] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -46,6 +48,12 @@ export default function UserAssets() {
       }
       setUser(parsedUser)
       loadAssets()
+      
+      // Check for lowStock query parameter
+      const urlParams = new URLSearchParams(window.location.search)
+      if (urlParams.get('lowStock') === 'true') {
+        setShowLowStockOnly(true)
+      }
     } catch (error) {
       router.push('/login')
     }
@@ -90,8 +98,20 @@ export default function UserAssets() {
 
 
   const editAsset = (asset: Asset) => {
-    alert(`Editing asset: ${asset.name}`)
-    // Implement modal or edit form route later
+    setEditingAsset(asset)
+  }
+
+  const handleAssetSave = async (updatedAsset: Asset) => {
+    try {
+      // Update the local state immediately for better UX
+      setAssets(prev => prev.map(asset => asset.id === updatedAsset.id ? updatedAsset : asset))
+      setFilteredAssets(prev => prev.map(asset => asset.id === updatedAsset.id ? updatedAsset : asset))
+      
+      // Reload data from server to ensure consistency
+      await loadAssets()
+    } catch (error) {
+      console.error('Error updating asset:', error)
+    }
   }
 
   if (loading) {
@@ -111,7 +131,7 @@ export default function UserAssets() {
       <div className="header">
         <h1>Asset Management</h1>
 
-        {/* Search */}
+        {/* Search and Filters */}
         <div className="search-bar">
           <input
             type="text"
@@ -121,6 +141,19 @@ export default function UserAssets() {
           />
         </div>
 
+        <div className="filter-controls">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px' }}>
+            <input
+              type="checkbox"
+              checked={showLowStockOnly}
+              onChange={(e) => {
+                setShowLowStockOnly(e.target.checked)
+                filterAssets(searchQuery)
+              }}
+            />
+            Show Low Stock Only
+          </label>
+        </div>
       </div>
 
       {filteredAssets.length > 0 ? (
@@ -183,6 +216,13 @@ export default function UserAssets() {
         </div>
       )}
 
+      {editingAsset && (
+        <EditAssetDialog
+          asset={editingAsset}
+          onClose={() => setEditingAsset(null)}
+          onSave={handleAssetSave}
+        />
+      )}
     </div>
   )
 }

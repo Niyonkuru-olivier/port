@@ -5,11 +5,27 @@ const path = require('path');
 
 console.log('🚀 Starting StoreMIS Server with Environment Variables...');
 
-// Set environment variables
-// process.env.DATABASE_URL = process.env.DATABASE_URL || "postgres://username:password@host:port/database?sslmode=require";
-process.env.NEXTAUTH_SECRET = "your_secure_secret_here_12345";
-process.env.NEXTAUTH_URL = "http://localhost:3000";
-process.env.JWT_SECRET = "your_jwt_secret_here_12345";
+// Load environment variables from .env file if it exists
+try {
+  require('dotenv').config();
+  console.log('📁 Loaded environment variables from .env file');
+} catch (error) {
+  console.log('⚠️  No .env file found, using default values');
+}
+
+// Set default environment variables if not already set
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = "postgresql://postgres:Da1wi2d$@localhost:5432/mininfra?sslmode=prefer";
+}
+if (!process.env.NEXTAUTH_SECRET) {
+  process.env.NEXTAUTH_SECRET = "your_secure_secret_here_12345";
+}
+if (!process.env.NEXTAUTH_URL) {
+  process.env.NEXTAUTH_URL = "http://localhost:3000";
+}
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = "your_jwt_secret_here_12345";
+}
 
 console.log('✅ Environment variables set successfully!');
 console.log('📊 DATABASE_URL:', process.env.DATABASE_URL);

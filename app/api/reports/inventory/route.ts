@@ -1,150 +1,176 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { generatePDFReport, generateExcelReport, generateCSVReport, ReportData } from '@/lib/reportGenerator'
+import PDFDocument from 'pdfkit'
+import fs from 'fs'
+import path from 'path'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { items, format = 'pdf' } = body
+    const { items, type, format, startDate, endDate } = body
 
-    if (!items || !Array.isArray(items)) {
-      return NextResponse.json(
-        { error: 'Items array is required' },
-        { status: 400 }
-      )
+    // Get inventory items - ONLY selected items
+    let inventoryItems
+    if (items && items.length > 0) {
+      inventoryItems = await prisma.inventory.findMany({
+        where: {
+          name: {
+            in: items
+          }
+        }
+      })
+    } else {
+      return NextResponse.json({ message: 'No items selected' }, { status: 400 })
     }
 
-    // Get inventory data from database
-    const inventoryData = await prisma.inventory.findMany({
-      where: {
-        id: {
-          in: items.map((item: any) => item.id)
-        }
+    if (!inventoryItems.length) {
+      return NextResponse.json({ message: 'No inventory items found' }, { status: 404 })
+    }
+
+    const reportsDir = path.join(process.cwd(), 'reports')
+    if (!fs.existsSync(reportsDir)) {
+      fs.mkdirSync(reportsDir, { recursive: true })
+    }
+
+    const filename = `inventory-report-${Date.now()}.pdf`
+    const filePath = path.join(reportsDir, filename)
+
+    // Generate PDF report
+    const doc = new PDFDocument({ margin: 50, size: 'A4' })
+    const stream = fs.createWriteStream(filePath)
+    doc.pipe(stream)
+
+    // Logo path - UPDATE THIS PATH based on where you place logo.png
+    const logoPath = path.join(process.cwd(), 'public', 'assets', 'logo.png')
+
+    // Header
+    doc.fontSize(16).text('Republic of Rwanda', { align: 'center' })
+    
+    // Add logo if it exists
+    if (fs.existsSync(logoPath)) {
+      const logoY = (doc as any).y + 10
+      doc.image(logoPath, 50, logoY, { width: 80 })
+    }
+    
+    doc.moveDown(6)
+    doc.fontSize(12).text('MINISTRY OF INFRASTRUCTURE')
+    doc.fontSize(11).text('P.O.BOX 24 KIGALI', { underline: true })
+    doc.fontSize(8).text('E-mail: info@mininfra.gov.rw')
+
+    const currentDate = new Date().toLocaleDateString()
+    doc.moveDown(2)
+    doc.fontSize(13).text('INVENTORY REPORT AS AT ' + currentDate, {
+      align: 'center',
+      underline: true,
+    })
+    doc.moveDown(2)
+
+    // Table headers
+    const headers = ['No', 'Name', 'Description', 'Qty In', 'Qty Out', 'Balance Qty', 'Unit Price(RWF)', 'Total Price(RWF)']
+    const colWidths = [30, 80, 100, 50, 50, 60, 60, 60]
+    const startX = 50
+    let y = (doc as any).y
+    const rowHeight = 30
+
+    // Draw header row
+    doc.font('Helvetica-Bold').fontSize(10)
+    headers.forEach((header, i) => {
+      const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
+      doc.text(header, x + 2, y + 5, { width: colWidths[i] - 4, align: 'left' })
+      doc.rect(x, y, colWidths[i], rowHeight).stroke()
+    })
+
+    y += rowHeight
+    doc.font('Helvetica').fontSize(9)
+
+    // Draw data rows
+    inventoryItems.forEach((item, index) => {
+      const qtyIn = item.qtyin || 0
+      const qtyOut = item.qtyout || 0
+      const balanceQty = Number(item.balanceqty) || 0
+      const unitPrice = Number(item.unitprice) || 0
+      const totalPrice = unitPrice * balanceQty
+
+      const row = [
+        index + 1,
+        item.name || '',
+        item.description || '',
+        qtyIn.toString(),
+        qtyOut.toString(),
+        balanceQty.toString(),
+        unitPrice.toFixed(2),
+        totalPrice.toFixed(2)
+      ]
+
+      row.forEach((cell, i) => {
+        const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
+        doc.text(String(cell), x + 2, y + 5, { width: colWidths[i] - 4, align: 'left' })
+        doc.rect(x, y, colWidths[i], rowHeight).stroke()
+      })
+      y += rowHeight
+
+      if (y + rowHeight > doc.page.height - 150) {
+        doc.addPage()
+        y = 50
       }
     })
 
-    if (inventoryData.length === 0) {
-      return NextResponse.json(
-        { error: 'No inventory items found' },
-        { status: 404 }
-      )
-    }
+    // Grand total line
+    y += 10
+    const grandTotal = inventoryItems.reduce((sum, item) => {
+      const unitPrice = Number(item.unitprice) || 0
+      const balanceQty = Number(item.balanceqty) || 0
+      return sum + (unitPrice * balanceQty)
+    }, 0)
 
-    // Generate report data
-    const reportData: ReportData = {
-      title: 'Inventory Report',
-      generatedAt: new Date().toISOString(),
-      items: inventoryData.map(item => ({
-        id: item.id,
-        number: item.number || `INV-${String(item.id).padStart(4, '0')}`,
-        name: item.name || '',
-        description: item.description || '',
-        condition: item.condition || '',
-        qtyIn: item.qtyin || 0,
-        qtyOut: item.qtyout || 0,
-        balanceQty: (item.qtyin || 0) - (item.qtyout || 0),
-        unitPrice: Number(item.unitprice) || 0,
-        totalPrice: (Number(item.unitprice) || 0) * ((item.qtyin || 0) - (item.qtyout || 0)),
-        threshold: item.threshold || 5,
-        status: ((item.qtyin || 0) - (item.qtyout || 0)) <= (item.threshold || 5) ? 'Low Stock' : 'OK'
-      })),
-      summary: {
-        totalItems: inventoryData.length,
-        totalValue: inventoryData.reduce((sum, item) => 
-          sum + ((Number(item.unitprice) || 0) * ((item.qtyin || 0) - (item.qtyout || 0))), 0
-        ),
-        lowStockItems: inventoryData.filter(item => 
-          ((item.qtyin || 0) - (item.qtyout || 0)) <= (item.threshold || 5)
-        ).length
-      }
-    }
+    doc.font('Helvetica-Bold').fontSize(10)
+    doc.text(`Grand Total: ${grandTotal.toFixed(2)} RWF`, startX, y)
 
-    // Generate file based on format
-    let fileBuffer: Buffer
-    let contentType: string
-    let filename: string
+    // Footer signatories
+    doc.moveDown(6)
+    const indent = 50
+    const sigLine = '____________________'
+    doc.font('Helvetica-Bold').text('Prepared by:', indent)
+    doc.font('Helvetica').text(`Celestin Safari          ${sigLine}`)
+    doc.text('Logistics Officer')
+    doc.moveDown()
+    doc.font('Helvetica-Bold').text('Checked by:', indent)
+    doc.font('Helvetica').text(`Martin Munyaneza         ${sigLine}`)
+    doc.text('Financial Management Specialist')
+    doc.moveDown()
+    doc.font('Helvetica-Bold').text('Approved by:', indent)
+    doc.font('Helvetica').text(`Marie Chantal Zaninka    ${sigLine}`)
+    doc.text('DG/Corporate Services')
+    doc.moveDown()
+    doc.font('Helvetica-Bold').text('Verified by:', indent)
+    doc.font('Helvetica').text(`Javan Gatoya             ${sigLine}`)
+    doc.text('Chairperson/Logistic Committee')
+    doc.text(`Daniel Kamanzi           ${sigLine}`)
+    doc.text('Member Logistic Committee')
 
-    switch (format.toLowerCase()) {
-      case 'pdf':
-        fileBuffer = generatePDFReport(reportData)
-        contentType = 'text/plain'
-        filename = `inventory-report-${Date.now()}.txt`
-        break
-      case 'xlsx':
-      case 'excel':
-        fileBuffer = await generateExcelReport(reportData)
-        contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        filename = `inventory-report-${Date.now()}.xlsx`
-        break
-      case 'csv':
-        const csvContent = generateCSVReport(reportData)
-        fileBuffer = Buffer.from(csvContent, 'utf-8')
-        contentType = 'text/csv'
-        filename = `inventory-report-${Date.now()}.csv`
-        break
-      default:
-        return NextResponse.json(
-          { error: 'Unsupported format. Use pdf, xlsx, or csv' },
-          { status: 400 }
-        )
-    }
+    doc.end()
 
-    // Return file as response
-    return new NextResponse(new Uint8Array(fileBuffer), {
-      status: 200,
+    await new Promise<void>((resolve, reject) => {
+      stream.on('finish', resolve)
+      stream.on('error', reject)
+    })
+
+    // Read the file and send as response
+    const fileBuffer = fs.readFileSync(filePath)
+    
+    // Clean up
+    fs.unlinkSync(filePath)
+
+    return new NextResponse(fileBuffer, {
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': fileBuffer.length.toString()
-      }
+      },
     })
 
   } catch (error) {
     console.error('Error generating inventory report:', error)
-    return NextResponse.json(
-      { error: 'Failed to generate inventory report' },
-      { status: 500 }
-    )
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
   }
 }
 
-export async function GET() {
-  try {
-    // Get all inventory items for report preview
-    const inventoryData = await prisma.inventory.findMany({
-      select: {
-        id: true,
-        number: true,
-        name: true,
-        description: true,
-        condition: true,
-        qtyin: true,
-        qtyout: true,
-        unitprice: true,
-        threshold: true
-      }
-    })
-
-    const reportPreview = {
-      title: 'Inventory Report Preview',
-      totalItems: inventoryData.length,
-      items: inventoryData.map(item => ({
-        id: item.id,
-        number: item.number || `INV-${String(item.id).padStart(4, '0')}`,
-        name: item.name,
-        balanceQty: (item.qtyin || 0) - (item.qtyout || 0),
-        unitPrice: item.unitprice || 0,
-        status: ((item.qtyin || 0) - (item.qtyout || 0)) <= (item.threshold || 5) ? 'Low Stock' : 'OK'
-      }))
-    }
-
-    return NextResponse.json(reportPreview)
-
-  } catch (error) {
-    console.error('Error getting inventory report preview:', error)
-    return NextResponse.json(
-      { error: 'Failed to get inventory report preview' },
-      { status: 500 }
-    )
-  }
-}

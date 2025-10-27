@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import EditInventoryDialog from './EditInventoryDialog'
 import '../../admin-dashboard/asset-management/asset-management.component.scss'
 
 interface InventoryItem {
@@ -27,6 +28,7 @@ export default function UserInventory() {
   const [user, setUser] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -46,6 +48,12 @@ export default function UserInventory() {
       }
       setUser(parsedUser)
       loadInventory()
+      
+      // Check for lowStock query parameter
+      const urlParams = new URLSearchParams(window.location.search)
+      if (urlParams.get('lowStock') === 'true') {
+        setShowLowStockOnly(true)
+      }
     } catch (error) {
       router.push('/login')
     }
@@ -95,8 +103,20 @@ export default function UserInventory() {
 
 
   const editItem = (item: InventoryItem) => {
-    alert(`Editing item: ${item.name}`)
-    // Implement modal or edit form route later
+    setEditingItem(item)
+  }
+
+  const handleItemSave = async (updatedItem: InventoryItem) => {
+    try {
+      // Update the local state immediately for better UX
+      setInventory(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item))
+      setFilteredInventory(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item))
+      
+      // Reload data from server to ensure consistency
+      await loadInventory()
+    } catch (error) {
+      console.error('Error updating inventory item:', error)
+    }
   }
 
   if (loading) {
@@ -116,7 +136,7 @@ export default function UserInventory() {
       <div className="header">
         <h1>Inventory Management</h1>
 
-        {/* Search */}
+        {/* Search and Filters */}
         <div className="search-bar">
           <input
             type="text"
@@ -126,6 +146,19 @@ export default function UserInventory() {
           />
         </div>
 
+        <div className="filter-controls">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px' }}>
+            <input
+              type="checkbox"
+              checked={showLowStockOnly}
+              onChange={(e) => {
+                setShowLowStockOnly(e.target.checked)
+                filterInventory(searchQuery)
+              }}
+            />
+            Show Low Stock Only
+          </label>
+        </div>
       </div>
 
       {filteredInventory.length > 0 ? (
@@ -188,6 +221,13 @@ export default function UserInventory() {
         </div>
       )}
 
+      {editingItem && (
+        <EditInventoryDialog
+          item={editingItem}
+          onClose={() => setEditingItem(null)}
+          onSave={handleItemSave}
+        />
+      )}
     </div>
   )
 }

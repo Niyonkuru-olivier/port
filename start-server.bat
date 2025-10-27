@@ -2,7 +2,8 @@
 echo Starting StoreMIS Server with Environment Variables...
 
 REM Set environment variables
-REM set DATABASE_URL=postgres://username:password@host:port/database?sslmode=require
+REM DATABASE_URL should be set in your environment or .env file
+set DATABASE_URL = "postgres://username:password@host:port/database?sslmode=require"
 set NEXTAUTH_SECRET=your_secure_secret_here_12345
 set NEXTAUTH_URL=http://localhost:3000
 set JWT_SECRET=your_jwt_secret_here_12345

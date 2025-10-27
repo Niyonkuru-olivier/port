@@ -1,169 +1,176 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { generatePDFReport, generateExcelReport, generateCSVReport, ReportData } from '@/lib/reportGenerator'
+import PDFDocument from 'pdfkit'
+import fs from 'fs'
+import path from 'path'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Assets report API called')
     const body = await request.json()
-    console.log('Request body:', body)
-    const { items, format = 'pdf' } = body
+    const { items, type, format, startDate, endDate } = body
 
-    if (!items || !Array.isArray(items)) {
-      console.log('Invalid items array')
-      return NextResponse.json(
-        { error: 'Items array is required' },
-        { status: 400 }
-      )
+    // Get asset items - ONLY selected items
+    let assetItems
+    if (items && items.length > 0) {
+      assetItems = await prisma.assets.findMany({
+        where: {
+          name: {
+            in: items
+          }
+        }
+      })
+    } else {
+      return NextResponse.json({ message: 'No items selected' }, { status: 400 })
     }
 
-    console.log('Fetching assets from database...')
-    // Get assets data from database
-    const assetsData = await prisma.assets.findMany({
-      where: {
-        id: {
-          in: items.map((item: any) => item.id)
-        }
+    if (!assetItems.length) {
+      return NextResponse.json({ message: 'No asset items found' }, { status: 404 })
+    }
+
+    const reportsDir = path.join(process.cwd(), 'reports')
+    if (!fs.existsSync(reportsDir)) {
+      fs.mkdirSync(reportsDir, { recursive: true })
+    }
+
+    const filename = `asset-report-${Date.now()}.pdf`
+    const filePath = path.join(reportsDir, filename)
+
+    // Generate PDF report
+    const doc = new PDFDocument({ margin: 50, size: 'A4' })
+    const stream = fs.createWriteStream(filePath)
+    doc.pipe(stream)
+
+    // Logo path - UPDATE THIS PATH based on where you place logo.png
+    const logoPath = path.join(process.cwd(), 'public', 'assets', 'logo.png')
+
+    // Header
+    doc.fontSize(16).text('Republic of Rwanda', { align: 'center' })
+    
+    // Add logo if it exists
+    if (fs.existsSync(logoPath)) {
+      const logoY = (doc as any).y + 10
+      doc.image(logoPath, 50, logoY, { width: 80 })
+    }
+    
+    doc.moveDown(6)
+    doc.fontSize(12).text('MINISTRY OF INFRASTRUCTURE')
+    doc.fontSize(11).text('P.O.BOX 24 KIGALI', { underline: true })
+    doc.fontSize(8).text('E-mail: info@mininfra.gov.rw')
+
+    const currentDate = new Date().toLocaleDateString()
+    doc.moveDown(2)
+    doc.fontSize(13).text('ASSET REPORT AS AT ' + currentDate, {
+      align: 'center',
+      underline: true,
+    })
+    doc.moveDown(2)
+
+    // Table headers
+    const headers = ['No', 'Name', 'Description', 'Qty In', 'Qty Out', 'Balance Qty', 'Unit Price(RWF)', 'Total Price(RWF)']
+    const colWidths = [30, 80, 100, 50, 50, 60, 60, 60]
+    const startX = 50
+    let y = (doc as any).y
+    const rowHeight = 30
+
+    // Draw header row
+    doc.font('Helvetica-Bold').fontSize(10)
+    headers.forEach((header, i) => {
+      const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
+      doc.text(header, x + 2, y + 5, { width: colWidths[i] - 4, align: 'left' })
+      doc.rect(x, y, colWidths[i], rowHeight).stroke()
+    })
+
+    y += rowHeight
+    doc.font('Helvetica').fontSize(9)
+
+    // Draw data rows
+    assetItems.forEach((item, index) => {
+      const qtyIn = item.qty_in || 0
+      const qtyOut = item.qty_out || 0
+      const balanceQty = Number(item.balance_qty) || 0
+      const unitPrice = Number(item.unit_price) || 0
+      const totalPrice = unitPrice * balanceQty
+
+      const row = [
+        index + 1,
+        item.name || '',
+        item.description || '',
+        qtyIn.toString(),
+        qtyOut.toString(),
+        balanceQty.toString(),
+        unitPrice.toFixed(2),
+        totalPrice.toFixed(2)
+      ]
+
+      row.forEach((cell, i) => {
+        const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
+        doc.text(String(cell), x + 2, y + 5, { width: colWidths[i] - 4, align: 'left' })
+        doc.rect(x, y, colWidths[i], rowHeight).stroke()
+      })
+      y += rowHeight
+
+      if (y + rowHeight > doc.page.height - 150) {
+        doc.addPage()
+        y = 50
       }
     })
 
-    console.log('Found assets:', assetsData.length)
+    // Grand total line
+    y += 10
+    const grandTotal = assetItems.reduce((sum, item) => {
+      const unitPrice = Number(item.unit_price) || 0
+      const balanceQty = Number(item.balance_qty) || 0
+      return sum + (unitPrice * balanceQty)
+    }, 0)
 
-    if (assetsData.length === 0) {
-      console.log('No assets found')
-      return NextResponse.json(
-        { error: 'No asset items found' },
-        { status: 404 }
-      )
-    }
+    doc.font('Helvetica-Bold').fontSize(10)
+    doc.text(`Grand Total: ${grandTotal.toFixed(2)} RWF`, startX, y)
 
-    console.log('Generating report data...')
-    // Generate report data
-    const reportData: ReportData = {
-      title: 'Asset Report',
-      generatedAt: new Date().toISOString(),
-      items: assetsData.map(asset => ({
-        id: asset.id,
-        number: asset.number,
-        name: asset.name,
-        description: asset.description || '',
-        condition: asset.condition,
-        sku: asset.sku,
-        qtyIn: asset.qty_in,
-        qtyOut: asset.qty_out,
-        balanceQty: asset.balance_qty || 0,
-        unitPrice: Number(asset.unit_price) || 0,
-        totalPrice: Number(asset.unit_price) * (asset.balance_qty || 0),
-        threshold: asset.threshold || 5,
-        status: (asset.balance_qty || 0) <= (asset.threshold || 5) ? 'Low Stock' : 'OK'
-      })),
-      summary: {
-        totalItems: assetsData.length,
-        totalValue: assetsData.reduce((sum, asset) => 
-          sum + (Number(asset.unit_price) * (asset.balance_qty || 0)), 0
-        ),
-        lowStockItems: assetsData.filter(asset => 
-          (asset.balance_qty || 0) <= (asset.threshold || 5)
-        ).length
-      }
-    }
+    // Footer signatories
+    doc.moveDown(6)
+    const indent = 50
+    const sigLine = '____________________'
+    doc.font('Helvetica-Bold').text('Prepared by:', indent)
+    doc.font('Helvetica').text(`Celestin Safari          ${sigLine}`)
+    doc.text('Logistics Officer')
+    doc.moveDown()
+    doc.font('Helvetica-Bold').text('Checked by:', indent)
+    doc.font('Helvetica').text(`Martin Munyaneza         ${sigLine}`)
+    doc.text('Financial Management Specialist')
+    doc.moveDown()
+    doc.font('Helvetica-Bold').text('Approved by:', indent)
+    doc.font('Helvetica').text(`Marie Chantal Zaninka    ${sigLine}`)
+    doc.text('DG/Corporate Services')
+    doc.moveDown()
+    doc.font('Helvetica-Bold').text('Verified by:', indent)
+    doc.font('Helvetica').text(`Javan Gatoya             ${sigLine}`)
+    doc.text('Chairperson/Logistic Committee')
+    doc.text(`Daniel Kamanzi           ${sigLine}`)
+    doc.text('Member Logistic Committee')
 
-    console.log('Report data generated, creating file...')
-    // Generate file based on format
-    let fileBuffer: Buffer
-    let contentType: string
-    let filename: string
+    doc.end()
 
-    switch (format.toLowerCase()) {
-      case 'pdf':
-        console.log('Generating PDF...')
-        fileBuffer = generatePDFReport(reportData)
-        contentType = 'text/plain'
-        filename = `asset-report-${Date.now()}.txt`
-        break
-      case 'xlsx':
-      case 'excel':
-        console.log('Generating Excel...')
-        fileBuffer = await generateExcelReport(reportData)
-        contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        filename = `asset-report-${Date.now()}.xlsx`
-        break
-      case 'csv':
-        console.log('Generating CSV...')
-        const csvContent = generateCSVReport(reportData)
-        fileBuffer = Buffer.from(csvContent, 'utf-8')
-        contentType = 'text/csv'
-        filename = `asset-report-${Date.now()}.csv`
-        break
-      default:
-        console.log('Unsupported format:', format)
-        return NextResponse.json(
-          { error: 'Unsupported format. Use pdf, xlsx, or csv' },
-          { status: 400 }
-        )
-    }
+    await new Promise<void>((resolve, reject) => {
+      stream.on('finish', resolve)
+      stream.on('error', reject)
+    })
 
-    console.log('File generated successfully, returning response...')
-    // Return file as response
-    return new NextResponse(new Uint8Array(fileBuffer), {
-      status: 200,
+    // Read the file and send as response
+    const fileBuffer = fs.readFileSync(filePath)
+    
+    // Clean up
+    fs.unlinkSync(filePath)
+
+    return new NextResponse(fileBuffer, {
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': fileBuffer.length.toString()
-      }
+      },
     })
 
   } catch (error) {
     console.error('Error generating asset report:', error)
-    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error')
-    return NextResponse.json(
-      { error: 'Failed to generate asset report', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
   }
 }
 
-export async function GET() {
-  try {
-    // Get all assets for report preview
-    const assetsData = await prisma.assets.findMany({
-      select: {
-        id: true,
-        number: true,
-        name: true,
-        description: true,
-        sku: true,
-        condition: true,
-        qty_in: true,
-        qty_out: true,
-        balance_qty: true,
-        unit_price: true,
-        threshold: true
-      }
-    })
-
-    const reportPreview = {
-      title: 'Asset Report Preview',
-      totalItems: assetsData.length,
-      items: assetsData.map(asset => ({
-        id: asset.id,
-        number: asset.number,
-        name: asset.name,
-        sku: asset.sku,
-        balanceQty: asset.balance_qty,
-        unitPrice: asset.unit_price,
-        status: (asset.balance_qty || 0) <= (asset.threshold || 5) ? 'Low Stock' : 'OK'
-      }))
-    }
-
-    return NextResponse.json(reportPreview)
-
-  } catch (error) {
-    console.error('Error getting asset report preview:', error)
-    return NextResponse.json(
-      { error: 'Failed to get asset report preview' },
-      { status: 500 }
-    )
-  }
-}

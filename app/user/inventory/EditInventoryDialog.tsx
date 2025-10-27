@@ -1,0 +1,289 @@
+'use client'
+
+import React, { useState } from 'react'
+
+interface InventoryItem {
+  id: number
+  number: string
+  name: string
+  description: string
+  condition: string
+  qtyin: number
+  qtyout: number
+  balanceqty: number
+  unitprice: number
+  totalprice: number
+  threshold: number
+}
+
+interface EditInventoryDialogProps {
+  item: InventoryItem | null
+  onClose: () => void
+  onSave: (item: InventoryItem) => void
+}
+
+const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose, onSave }) => {
+  const [formData, setFormData] = useState<InventoryItem>(
+    item || {
+      id: 0,
+      number: '',
+      name: '',
+      description: '',
+      condition: 'Good',
+      qtyin: 0,
+      qtyout: 0,
+      balanceqty: 0,
+      unitprice: 0,
+      totalprice: 0,
+      threshold: 5
+    }
+  )
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'qtyin' || name === 'qtyout' || name === 'unitprice' || name === 'threshold' || name === 'id'
+        ? Number(value)
+        : value
+    }))
+  }
+
+  const handleSave = async () => {
+    try {
+      const response = await fetch(`/api/inventory/${formData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          description: formData.description,
+          condition: formData.condition,
+          qtyin: formData.qtyin,
+          qtyout: formData.qtyout,
+          unitprice: formData.unitprice,
+          threshold: formData.threshold,
+        }),
+      })
+
+      if (response.ok) {
+        const updatedItem = await response.json()
+        onSave(updatedItem)
+        onClose()
+      } else {
+        alert('Failed to update inventory item')
+      }
+    } catch (error) {
+      console.error('Error updating inventory item:', error)
+      alert('Error updating inventory item')
+    }
+  }
+
+  if (!item) return null
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100vw',
+      height: '100vh',
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+      padding: '20px'
+    }}>
+      <div style={{
+        backgroundColor: '#fff',
+        borderRadius: '8px',
+        width: '90%',
+        maxWidth: '600px',
+        maxHeight: '90vh',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        <div style={{
+          padding: '24px 24px 0 24px',
+          borderBottom: '1px solid #eee'
+        }}>
+          <h2 style={{ marginTop: 0, marginBottom: '20px' }}>Edit Inventory Item</h2>
+        </div>
+        
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '24px'
+        }} className="edit-dialog-scroll">
+          <form>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>Item Number</label>
+            <input
+              style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+              name="number"
+              value={formData.number}
+              onChange={handleChange}
+              disabled
+            />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>Name</label>
+            <input
+              style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>Description</label>
+            <textarea
+              style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+              name="description"
+              rows={3}
+              value={formData.description}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>Condition</label>
+            <select
+              style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+              name="condition"
+              value={formData.condition}
+              onChange={handleChange}
+              required
+            >
+              <option value="Fair">Fair</option>
+              <option value="Good">Good</option>
+              <option value="Very Good">Very Good</option>
+            </select>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>Quantity In</label>
+            <input
+              style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+              type="number"
+              name="qtyin"
+              min={0}
+              value={formData.qtyin}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>Quantity Out</label>
+            <input
+              style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+              type="number"
+              name="qtyout"
+              min={0}
+              value={formData.qtyout}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>Unit Price (RWF)</label>
+            <input
+              style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+              type="number"
+              name="unitprice"
+              min={0}
+              step="0.01"
+              value={formData.unitprice}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>Threshold</label>
+            <input
+              style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+              type="number"
+              name="threshold"
+              min={1}
+              value={formData.threshold}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+            <p style={{ margin: '0 0 8px 0' }}>
+              <strong>Balance Quantity:</strong> {formData.qtyin - formData.qtyout}
+            </p>
+            <p style={{ margin: 0 }}>
+              <strong>Total Price:</strong> {formData.unitprice * (formData.qtyin - formData.qtyout)} RWF
+            </p>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>Notes</label>
+            <textarea
+              style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+              name="notes"
+              rows={3}
+              placeholder="Additional notes about this inventory item..."
+            />
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>Last Updated</label>
+            <input
+              style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+              type="datetime-local"
+              value={new Date().toISOString().slice(0, 16)}
+              disabled
+            />
+          </div>
+          </form>
+        </div>
+        
+        <div style={{
+          padding: '16px 24px',
+          borderTop: '1px solid #eee',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '8px'
+        }}>
+          <button 
+            type="button" 
+            onClick={onClose}
+            style={{ padding: '8px 16px', border: '1px solid #ccc', borderRadius: '4px', backgroundColor: '#fff', cursor: 'pointer' }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!formData.name || formData.qtyin < 0 || formData.unitprice < 0 || formData.threshold < 1}
+            style={{ 
+              backgroundColor: '#4361ee', 
+              color: 'white', 
+              padding: '8px 16px', 
+              border: 'none', 
+              borderRadius: '4px',
+              cursor: 'pointer',
+              opacity: (!formData.name || formData.qtyin < 0 || formData.unitprice < 0 || formData.threshold < 1) ? 0.5 : 1
+            }}
+          >
+            Update Item
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default EditInventoryDialog
