@@ -26,6 +26,7 @@
     "dotenv": "^17.2.3",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
+    "iconv-lite": "^0.7.0",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.3",
     "next": "14.2.5",

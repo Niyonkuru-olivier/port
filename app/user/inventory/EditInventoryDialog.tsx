@@ -7,12 +7,13 @@ interface InventoryItem {
   number: string
   name: string
   description: string
+  sku: string
   condition: string
-  qtyin: number
-  qtyout: number
-  balanceqty: number
-  unitprice: number
-  totalprice: number
+  qty_in: number
+  qty_out: number
+  balance_qty: number
+  unit_price: number
+  total_price: number
   threshold: number
 }
 
@@ -29,12 +30,13 @@ const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose
       number: '',
       name: '',
       description: '',
+      sku: '',
       condition: 'Good',
-      qtyin: 0,
-      qtyout: 0,
-      balanceqty: 0,
-      unitprice: 0,
-      totalprice: 0,
+      qty_in: 0,
+      qty_out: 0,
+      balance_qty: 0,
+      unit_price: 0,
+      total_price: 0,
       threshold: 5
     }
   )
@@ -43,7 +45,7 @@ const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'qtyin' || name === 'qtyout' || name === 'unitprice' || name === 'threshold' || name === 'id'
+      [name]: name === 'qty_in' || name === 'qty_out' || name === 'unit_price' || name === 'threshold' || name === 'id'
         ? Number(value)
         : value
     }))
@@ -60,9 +62,9 @@ const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose
           name: formData.name,
           description: formData.description,
           condition: formData.condition,
-          qtyin: formData.qtyin,
-          qtyout: formData.qtyout,
-          unitprice: formData.unitprice,
+          qtyin: formData.qty_in,
+          qtyout: formData.qty_out,
+          unitprice: formData.unit_price,
           threshold: formData.threshold,
         }),
       })
@@ -172,9 +174,9 @@ const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose
             <input
               style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
               type="number"
-              name="qtyin"
+              name="qty_in"
               min={0}
-              value={formData.qtyin}
+              value={formData.qty_in}
               onChange={handleChange}
               required
             />
@@ -185,9 +187,9 @@ const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose
             <input
               style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
               type="number"
-              name="qtyout"
+              name="qty_out"
               min={0}
-              value={formData.qtyout}
+              value={formData.qty_out}
               onChange={handleChange}
             />
           </div>
@@ -197,10 +199,10 @@ const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose
             <input
               style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
               type="number"
-              name="unitprice"
+              name="unit_price"
               min={0}
               step="0.01"
-              value={formData.unitprice}
+              value={formData.unit_price}
               onChange={handleChange}
               required
             />
@@ -221,10 +223,10 @@ const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose
 
           <div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
             <p style={{ margin: '0 0 8px 0' }}>
-              <strong>Balance Quantity:</strong> {formData.qtyin - formData.qtyout}
+              <strong>Balance Quantity:</strong> {formData.qty_in - formData.qty_out}
             </p>
             <p style={{ margin: 0 }}>
-              <strong>Total Price:</strong> {formData.unitprice * (formData.qtyin - formData.qtyout)} RWF
+              <strong>Total Price:</strong> {formData.unit_price * (formData.qty_in - formData.qty_out)} RWF
             </p>
           </div>
 
@@ -267,7 +269,7 @@ const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose
           <button
             type="button"
             onClick={handleSave}
-            disabled={!formData.name || formData.qtyin < 0 || formData.unitprice < 0 || formData.threshold < 1}
+            disabled={!formData.name || formData.qty_in < 0 || formData.unit_price < 0 || formData.threshold < 1}
             style={{ 
               backgroundColor: '#4361ee', 
               color: 'white', 
@@ -275,7 +277,7 @@ const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose
               border: 'none', 
               borderRadius: '4px',
               cursor: 'pointer',
-              opacity: (!formData.name || formData.qtyin < 0 || formData.unitprice < 0 || formData.threshold < 1) ? 0.5 : 1
+              opacity: (!formData.name || formData.qty_in < 0 || formData.unit_price < 0 || formData.threshold < 1) ? 0.5 : 1
             }}
           >
             Update Item
