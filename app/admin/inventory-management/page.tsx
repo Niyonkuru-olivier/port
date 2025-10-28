@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import '../../admin-dashboard/asset-management/asset-management.component.scss'
 
@@ -19,7 +19,7 @@ interface InventoryItem {
   threshold: number
 }
 
-export default function AdminInventoryManagement() {
+function AdminInventoryManagementContent() {
   const [inventory, setInventory] = useState<InventoryItem[]>([])
   const [filteredInventory, setFilteredInventory] = useState<InventoryItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,6 +38,7 @@ export default function AdminInventoryManagement() {
     threshold: 5
   })
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -61,6 +62,14 @@ export default function AdminInventoryManagement() {
     }
   }, [router])
 
+  // Apply low stock filter when query param lowStock=true is present
+  useEffect(() => {
+    const low = searchParams?.get('lowStock') === 'true'
+    setShowLowStockOnly(low)
+    // re-run filter with current query when toggled via URL
+    filterInventory(searchQuery)
+  }, [searchParams])
+
   const loadInventory = async () => {
     try {
       const response = await fetch('/api/inventory')
@@ -76,7 +85,7 @@ export default function AdminInventoryManagement() {
           total_price: (item.unitprice || item.unit_price || 0) * ((item.qtyin || item.qty_in || 0) - (item.qtyout || item.qty_out || 0)),
         }))
         setInventory(computed)
-        setFilteredInventory(computed)
+        // Do not override filtered list here; filtering is driven by effect below
       }
     } catch (error) {
       console.error('Error loading inventory:', error)
@@ -102,6 +111,12 @@ export default function AdminInventoryManagement() {
     setFilteredInventory(filtered)
   }
 
+  // Keep filtered list in sync with data, query, and low-stock toggle
+  useEffect(() => {
+    filterInventory(searchQuery)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inventory, showLowStockOnly])
+
   const handleAddItem = async () => {
     try {
       if (editingItem) {
@@ -116,7 +131,8 @@ export default function AdminInventoryManagement() {
             qtyin: newItem.qty_in,
             qtyout: newItem.qty_out,
             unitprice: newItem.unit_price,
-            threshold: newItem.threshold
+            threshold: newItem.threshold,
+            performedBy: user?.email || 'system'
           })
         })
 
@@ -150,6 +166,7 @@ export default function AdminInventoryManagement() {
             qtyin: newItem.qty_in,
             qtyout: newItem.qty_out,
             unitprice: newItem.unit_price,
+            performedBy: user?.email || 'system',
           })
         })
 
@@ -409,5 +426,13 @@ export default function AdminInventoryManagement() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function AdminInventoryManagement() {
+  return (
+    <Suspense fallback={<div style={{ textAlign: 'center', padding: '50px' }}><div>Loading...</div></div>}>
+      <AdminInventoryManagementContent />
+    </Suspense>
   )
 }

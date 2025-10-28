@@ -25,10 +25,11 @@ export default function AdminLayout({
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', path: '/admin/dashboard' },
-    { id: 'user-dashboard', label: 'User Dashboard', icon: 'group', path: '/admin/user-dashboard' },
+    { id: 'user-dashboard', label: 'User Dashboard', icon: 'group', path: '/user/dashboard' },
     { id: 'user-management', label: 'User Management', icon: 'supervisor_account', path: '/admin/user-management' },
     { id: 'asset-management', label: 'Asset Management', icon: 'devices_other', path: '/admin/asset-management' },
     { id: 'inventory-management', label: 'Inventory Management', icon: 'inventory', path: '/admin/inventory-management' },
+    { id: 'transactions', label: 'Transactions', icon: 'receipt_long', path: '/admin/transactions' },
   ]
 
   const handleMenuClick = (item: any) => {

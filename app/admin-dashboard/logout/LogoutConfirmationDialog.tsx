@@ -5,7 +5,8 @@ interface LogoutConfirmationDialogProps {
   onClose: (confirmed: boolean) => void;
 }
 
-const LogoutConfirmationDialog: React.FC<LogoutConfirmationDialogProps> = ({ isOpen, onClose }) => {
+const LogoutConfirmationDialog: React.FC<LogoutConfirmationDialogProps> = 
+({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
@@ -37,7 +38,11 @@ const LogoutConfirmationDialog: React.FC<LogoutConfirmationDialogProps> = ({ isO
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
           <button
             onClick={() => onClose(false)}
-            style={{ marginRight: '8px', padding: '8px 16px', borderRadius: '4px' }}
+            style={{ 
+              marginRight: '8px', 
+              padding: '8px 16px', 
+              borderRadius: '4px' 
+            }}
           >
             No
           </button>

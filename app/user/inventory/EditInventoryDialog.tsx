@@ -53,6 +53,11 @@ const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose
 
   const handleSave = async () => {
     try {
+      let performedBy = 'system'
+      try {
+        const userStr = localStorage.getItem('user')
+        if (userStr) performedBy = JSON.parse(userStr).email || 'system'
+      } catch {}
       const response = await fetch(`/api/inventory/${formData.id}`, {
         method: 'PUT',
         headers: {
@@ -66,6 +71,7 @@ const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose
           qtyout: formData.qty_out,
           unitprice: formData.unit_price,
           threshold: formData.threshold,
+          performedBy,
         }),
       })
 

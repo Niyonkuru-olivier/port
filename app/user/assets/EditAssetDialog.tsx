@@ -53,6 +53,11 @@ const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ asset, onClose, onSav
 
   const handleSave = async () => {
     try {
+      let performedBy = 'system'
+      try {
+        const userStr = localStorage.getItem('user')
+        if (userStr) performedBy = JSON.parse(userStr).email || 'system'
+      } catch {}
       const response = await fetch(`/api/assets/${formData.id}`, {
         method: 'PUT',
         headers: {
@@ -66,6 +71,7 @@ const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ asset, onClose, onSav
           qty_out: formData.qty_out,
           unit_price: formData.unit_price,
           threshold: formData.threshold,
+          performedBy,
         }),
       })
 

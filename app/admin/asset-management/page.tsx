@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import '../../admin-dashboard/asset-management/asset-management.component.scss'
 import '../../admin-dashboard/asset-management/add-item-dialog/add-item-dialog.component.scss'
@@ -21,7 +21,7 @@ interface Asset {
   threshold: number
 }
 
-export default function AdminAssetManagement() {
+function AdminAssetManagementContent() {
   const [assets, setAssets] = useState<Asset[]>([])
   const [filteredAssets, setFilteredAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
@@ -43,6 +43,7 @@ export default function AdminAssetManagement() {
     threshold: 5
   })
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -66,6 +67,14 @@ export default function AdminAssetManagement() {
     }
   }, [router])
 
+  // Apply low stock filter when query param lowStock=true is present
+  useEffect(() => {
+    const low = searchParams?.get('lowStock') === 'true'
+    setShowLowStockOnly(low)
+    // re-run filter with current query when toggled via URL
+    filterAssets(searchQuery)
+  }, [searchParams])
+
   const loadAssets = async () => {
     try {
       const response = await fetch('/api/assets')
@@ -76,7 +85,7 @@ export default function AdminAssetManagement() {
           total_price: asset.unit_price * asset.balance_qty,
         }))
         setAssets(computed)
-        setFilteredAssets(computed)
+        // Do not override filtered list here; filtering is driven by effect below
       }
     } catch (error) {
       console.error('Error loading assets:', error)
@@ -103,6 +112,12 @@ export default function AdminAssetManagement() {
     setFilteredAssets(filtered)
   }
 
+  // Keep filtered list in sync with data, query, and low-stock toggle
+  useEffect(() => {
+    filterAssets(searchQuery)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assets, showLowStockOnly])
+
   const handleAddAsset = async () => {
     if (saving) return
     setSaving(true)
@@ -120,7 +135,8 @@ export default function AdminAssetManagement() {
             qty_in: newAsset.qty_in,
             qty_out: newAsset.qty_out,
             unit_price: newAsset.unit_price,
-            threshold: newAsset.threshold
+            threshold: newAsset.threshold,
+            performedBy: user?.email || 'system'
           })
         })
 
@@ -157,7 +173,8 @@ export default function AdminAssetManagement() {
             qty_in: newAsset.qty_in,
             qty_out: newAsset.qty_out,
             unit_price: newAsset.unit_price,
-            threshold: newAsset.threshold
+            threshold: newAsset.threshold,
+            performedBy: user?.email || 'system'
           })
         })
 
@@ -427,5 +444,13 @@ export default function AdminAssetManagement() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function AdminAssetManagement() {
+  return (
+    <Suspense fallback={<div style={{ textAlign: 'center', padding: '50px' }}><div>Loading...</div></div>}>
+      <AdminAssetManagementContent />
+    </Suspense>
   )
 }

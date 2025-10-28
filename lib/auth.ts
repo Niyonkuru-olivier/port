@@ -44,12 +44,21 @@ export async function validateUser(email: string, password: string, role: string
     console.log('Validating user:', { email, role })
     console.log('DATABASE_URL available:', !!process.env.DATABASE_URL)
     
-    const user = await prisma.user.findFirst({
+    // Try users table first (where new users are created)
+    let user: any = await prisma.users.findFirst({
       where: { 
-        email: email,
-        role: role 
+        email: email
       }
     })
+
+    // If not found in users table, try singular user table
+    if (!user) {
+      user = await prisma.user.findFirst({
+        where: { 
+          email: email
+        }
+      })
+    }
 
     console.log('Found user:', user ? { id: user.id, email: user.email, role: user.role, status: user.status } : 'No user found')
 
@@ -57,7 +66,21 @@ export async function validateUser(email: string, password: string, role: string
       return { success: false, message: 'User not found' }
     }
 
-    const isValidPassword = await verifyPassword(password, user.password)
+    // Check if user role matches (if not, still allow them to login but will redirect based on their actual role)
+    if (user.role && user.role !== role) {
+      console.log(`Role mismatch: requested ${role}, user has ${user.role}`)
+    }
+
+    // Check if user is active
+    const userStatus = (user as any).status
+    if (userStatus && userStatus.toLowerCase() === 'inactive') {
+      return { success: false, message: 'User account is inactive. Please contact administrator.' }
+    }
+
+    // Get password hash from the correct field
+    const passwordHash = (user as any).password_hash || (user as any).password
+    
+    const isValidPassword = await verifyPassword(password, passwordHash)
     console.log('Password valid:', isValidPassword)
     
     if (!isValidPassword) {
@@ -70,9 +93,9 @@ export async function validateUser(email: string, password: string, role: string
         id: user.id,
         email: user.email,
         role: user.role || 'user',
-        status: user.status || 'Activated'
+        status: userStatus || 'Activated'
       },
-      message: `${role} login successful`
+      message: `Login successful`
     }
   } catch (error) {
     console.error('Validation error:', error)

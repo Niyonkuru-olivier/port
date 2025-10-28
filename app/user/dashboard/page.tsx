@@ -30,7 +30,8 @@ export default function UserDashboard() {
 
     try {
       const parsedUser = JSON.parse(userData);
-      if (parsedUser.role !== 'user') {
+      // Allow both regular users and admins to access the user dashboard
+      if (parsedUser.role !== 'user' && parsedUser.role !== 'admin') {
         router.push('/login');
         return;
       }

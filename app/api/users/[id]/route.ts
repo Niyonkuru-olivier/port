@@ -54,14 +54,19 @@ export async function PUT(
     if (email) updateData.email = email
     if (role) updateData.role = role
     if (status) updateData.status = status
-    if (password) {
-      updateData.password_hash = await bcrypt.hash(password, 10)
-    }
 
     let updated
     if (legacyUser) {
+      // For users table, use password_hash
+      if (password) {
+        updateData.password_hash = await bcrypt.hash(password, 10)
+      }
       updated = await prisma.users.update({ where: { id: userId }, data: updateData })
     } else {
+      // For user table, use password field
+      if (password) {
+        updateData.password = await bcrypt.hash(password, 10)
+      }
       updated = await prisma.user.update({ where: { id: userId }, data: updateData })
     }
 

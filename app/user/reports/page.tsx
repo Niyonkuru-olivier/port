@@ -31,6 +31,7 @@ interface ReportData {
 
 const ReportsPage: React.FC = () => {
   const router = useRouter()
+  const [currentUser, setCurrentUser] = useState<{ name?: string; email?: string } | null>(null)
   const [dataSource, setDataSource] = useState<ReportItem[]>([])
   const [selectedItems, setSelectedItems] = useState<ReportItem[]>([])
   const [selectedReportType, setSelectedReportType] = useState<'inventory' | 'asset'>('inventory')
@@ -58,6 +59,12 @@ const ReportsPage: React.FC = () => {
   ]
 
   useEffect(() => {
+    // Load user for header branding
+    try {
+      const userStr = localStorage.getItem('user')
+      if (userStr) setCurrentUser(JSON.parse(userStr))
+    } catch {}
+    
     loadData()
   }, [selectedReportType])
 
@@ -264,6 +271,13 @@ const ReportsPage: React.FC = () => {
 
   return (
     <div className="reports-container">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+        <img src="/assets/logo.png" alt="Logo" style={{ width: 36, height: 36 }} />
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontWeight: 600 }}>Stock System Reports</span>
+          <span style={{ color: '#6b7280', fontSize: 12 }}>{currentUser?.name || currentUser?.email || ''}</span>
+        </div>
+      </div>
       <div className="reports-header">
         <h2>Reports</h2>
         <div className="report-controls">

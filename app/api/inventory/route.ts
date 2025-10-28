@@ -21,7 +21,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, description, qtyin, qtyout, balanceqty, unitprice, totalprice, threshold, condition, number } = await request.json()
+    const { name, description, qtyin, qtyout, balanceqty, unitprice, totalprice, threshold, condition, number, performedBy } = await request.json()
 
     if (!name || qtyin === undefined || unitprice === undefined) {
       return NextResponse.json(
@@ -44,6 +44,31 @@ export async function POST(request: NextRequest) {
         number: number || null
       }
     })
+
+    // Log transaction for adding inventory (add)
+    try {
+      const transaction = await prisma.transaction.create({
+        data: {
+          itemid: item.id,
+          itemname: item.name || name,
+          type: 'add',
+          quantity: parseInt(qtyin),
+          user: performedBy || 'system',
+          reason: 'Inventory item created'
+        }
+      })
+      console.log('Transaction created successfully:', transaction.id)
+    } catch (error) {
+      console.error('Error creating transaction:', error)
+      console.error('Transaction data:', {
+        itemid: item.id,
+        itemname: item.name || name,
+        type: 'add',
+        quantity: parseInt(qtyin),
+        user: performedBy || 'system',
+        reason: 'Inventory item created'
+      })
+    }
 
     return NextResponse.json({
       message: 'Inventory item created successfully',

@@ -35,7 +35,7 @@ export async function PUT(
 ) {
   try {
     const itemId = parseInt(params.id)
-    const { name, description, condition, qtyin, qtyout, unitprice, threshold } = await request.json()
+    const { name, description, condition, qtyin, qtyout, unitprice, threshold, performedBy } = await request.json()
 
     const existingItem = await prisma.inventory.findUnique({
       where: { id: itemId }
@@ -62,6 +62,23 @@ export async function PUT(
       where: { id: itemId },
       data: updateData
     })
+
+    // Log transaction for updating inventory
+    try {
+      const transaction = await prisma.transaction.create({
+        data: {
+          itemid: itemId,
+          itemname: item.name || 'Inventory Item',
+          type: 'update',
+          quantity: 1,
+          user: performedBy || 'system',
+          reason: 'Inventory item updated'
+        }
+      })
+      console.log('Transaction created successfully:', transaction.id)
+    } catch (error) {
+      console.error('Error creating transaction:', error)
+    }
 
     return NextResponse.json({
       message: 'Inventory item updated successfully',

@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import '../../admin-dashboard/user-management/user-management.component.scss'
 
 interface User {
   id: number
@@ -74,6 +72,21 @@ export default function AdminUserManagement() {
       })
 
       if (response.ok) {
+        // Log a transaction for adding a user
+        try {
+          await fetch('/api/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              itemid: 0,
+              itemname: newUser.email,
+              type: 'add',
+              quantity: 1,
+              user: user?.email || 'system',
+              reason: `User ${newUser.email} created`
+            })
+          })
+        } catch (_) {}
         await loadUsers()
         setShowAddDialog(false)
         setNewUser({
@@ -85,7 +98,7 @@ export default function AdminUserManagement() {
         alert('User added successfully!')
       } else {
         const error = await response.json()
-        alert(error.message || 'Failed to add user')
+        alert(error.message || 'Email already registered')
       }
     } catch (error) {
       console.error('Error adding user:', error)
@@ -103,6 +116,21 @@ export default function AdminUserManagement() {
       })
 
       if (response.ok) {
+        // Log a transaction for activation/deactivation
+        try {
+          await fetch('/api/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              itemid: 0,
+              itemname: `user:${userId}`,
+              type: 'update',
+              quantity: 1,
+              user: user?.email || 'system',
+              reason: `User ${userId} set to ${newStatus}`
+            })
+          })
+        } catch (_) {}
         await loadUsers()
         alert(`User ${newStatus.toLowerCase()} successfully!`)
       } else {
@@ -166,12 +194,6 @@ export default function AdminUserManagement() {
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    router.push('/login')
-  }
-
   const filteredUsers = users.filter(user => 
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -191,76 +213,190 @@ export default function AdminUserManagement() {
   }
 
   return (
-    <div className="user-management">
-      <h2>User Management</h2>
-
-      <div className="search-container">
-        <input
-          className="search-field"
-          type="text"
-          placeholder="Search by name, email or role"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+    <div style={{ padding: '24px' }}>
+      <div className="header">
+        <h1>User Management</h1>
+        <div className="header-actions">
+          <span>Welcome, {user.email}</span>
+        </div>
       </div>
 
-      <button onClick={() => setShowAddDialog(true)}>
-        Add User
-      </button>
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '20px', alignItems: 'center' }}>
+        <div style={{ flexBasis: '30%' }}>
+          <input
+            type="text"
+            placeholder="Search by name, email or role..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 16px',
+              borderRadius: '8px',
+              border: '1px solid #ddd',
+              fontSize: '14px'
+            }}
+          />
+        </div>
+        <div style={{ flexBasis: '30%', display: 'flex', justifyContent: 'flex-start' }}>
+          <button
+            onClick={() => setShowAddDialog(true)}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '8px',
+              backgroundColor: '#4361ee',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#3651d4'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#4361ee'}
+          >
+            <span>+</span> Add User
+          </button>
+        </div>
+        <div style={{ flexBasis: '30%' }} />
+      </div>
 
-      {filteredUsers.length === 0 ? (
-        <div style={{ marginTop: 16 }}>No users found.</div>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Role</th>
-              <th>Email</th>
-              <th>Status</th>
-              <th>Created At</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.map((userItem) => (
-              <tr key={userItem.id}>
-                <td>{userItem.id}</td>
-                <td>{userItem.name}</td>
-                <td>{userItem.role}</td>
-                <td>{userItem.email}</td>
-                <td>
-                  <span className={userItem.status === 'Active' ? 'badge-success' : 'badge-danger'}>
-                    {userItem.status}
-                  </span>
-                </td>
-                <td>{userItem.created_at ? new Date(userItem.created_at).toLocaleDateString() : ''}</td>
-                <td>
-                  <button onClick={() => editUser(userItem)} style={{ marginRight: 8 }}>Edit</button>
-                  <button onClick={() => toggleUserStatus(userItem.id, userItem.status)}>
-                    {userItem.status === 'Active' ? 'Deactivate' : 'Activate'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <div className="user-management-card" style={{ borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        {filteredUsers.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#6c757d' }}>
+            <p>No users found.</p>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%' }}>
+              <thead style={{ backgroundColor: '#f8f9fa' }}>
+                <tr>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: '#495057' }}>ID</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: '#495057' }}>Name</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: '#495057' }}>Role</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: '#495057' }}>Email</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: '#495057' }}>Status</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: '#495057' }}>Created At</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: '#495057' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((userItem) => (
+                  <tr key={userItem.id} style={{ borderBottom: '1px solid #f1f1f1' }}>
+                    <td style={{ padding: '12px 16px', fontSize: '14px', color: '#212529' }}>{userItem.id}</td>
+                    <td style={{ padding: '12px 16px', fontSize: '14px', color: '#212529' }}>{userItem.name}</td>
+                    <td style={{ padding: '12px 16px', fontSize: '14px', color: '#212529' }}>{userItem.role}</td>
+                    <td style={{ padding: '12px 16px', fontSize: '14px', color: '#212529' }}>{userItem.email}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span className={userItem.status === 'Active' ? 'badge-success' : 'badge-danger'}>
+                        {userItem.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px', fontSize: '14px', color: '#212529' }}>
+                      {userItem.created_at ? new Date(userItem.created_at).toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      }) : ''}
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => editUser(userItem)}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            border: '1px solid #4361ee',
+                            backgroundColor: 'white',
+                            color: '#4361ee',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.backgroundColor = '#4361ee'
+                            e.currentTarget.style.color = 'white'
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.backgroundColor = 'white'
+                            e.currentTarget.style.color = '#4361ee'
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => toggleUserStatus(userItem.id, userItem.status)}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            border: '1px solid',
+                            borderColor: userItem.status === 'Active' ? '#f72585' : '#4cc9f0',
+                            backgroundColor: 'white',
+                            color: userItem.status === 'Active' ? '#f72585' : '#4cc9f0',
+                            cursor: 'pointer',
+                            fontSize: '13px',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.backgroundColor = userItem.status === 'Active' ? '#f72585' : '#4cc9f0'
+                            e.currentTarget.style.color = 'white'
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.backgroundColor = 'white'
+                            e.currentTarget.style.color = userItem.status === 'Active' ? '#f72585' : '#4cc9f0'
+                          }}
+                        >
+                          {userItem.status === 'Active' ? 'Deactivate' : 'Activate'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {showAddDialog && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-          backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          width: '100vw', 
+          height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.4)', 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          zIndex: 1000
         }}>
-          <div style={{ backgroundColor: '#fff', borderRadius: 8, width: '90%', maxWidth: 500, padding: 24 }}>
-            <h3>{editingUser ? 'Edit User' : 'Add User'}</h3>
-            <form>
+          <div style={{ 
+            backgroundColor: '#fff', 
+            borderRadius: '8px', 
+            width: '90%', 
+            maxWidth: '500px', 
+            padding: '24px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+          }}>
+            <h2 style={{ marginTop: 0, marginBottom: '20px', color: '#212529' }}>
+              {editingUser ? 'Edit User' : 'Add User'}
+            </h2>
+            <form style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <input
                 placeholder="Full Name"
                 value={newUser.name}
                 onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                 required
+                style={{
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #ddd',
+                  fontSize: '14px',
+                  width: '100%'
+                }}
               />
               <input
                 type="email"
@@ -268,6 +404,13 @@ export default function AdminUserManagement() {
                 value={newUser.email}
                 onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                 required
+                style={{
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #ddd',
+                  fontSize: '14px',
+                  width: '100%'
+                }}
               />
               <input
                 type="password"
@@ -275,23 +418,70 @@ export default function AdminUserManagement() {
                 value={newUser.password}
                 onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                 required={!editingUser}
+                style={{
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #ddd',
+                  fontSize: '14px',
+                  width: '100%'
+                }}
               />
               <select
                 value={newUser.role}
                 onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
                 required
+                style={{
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #ddd',
+                  fontSize: '14px',
+                  width: '100%',
+                  cursor: 'pointer'
+                }}
               >
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
               </select>
             </form>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-              <button onClick={() => {
-                setShowAddDialog(false)
-                setEditingUser(null)
-                setNewUser({ name: '', email: '', password: '', role: 'user' })
-              }}>Cancel</button>
-              <button onClick={editingUser ? handleUpdateUser : handleAddUser} disabled={!newUser.name || !newUser.email || (!editingUser && !newUser.password)}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              gap: '8px', 
+              marginTop: '20px' 
+            }}>
+              <button
+                onClick={() => {
+                  setShowAddDialog(false)
+                  setEditingUser(null)
+                  setNewUser({ name: '', email: '', password: '', role: 'user' })
+                }}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  border: '1px solid #ddd',
+                  backgroundColor: 'white',
+                  color: '#495057',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={editingUser ? handleUpdateUser : handleAddUser}
+                disabled={!newUser.name || !newUser.email || (!editingUser && !newUser.password)}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#4361ee',
+                  color: 'white',
+                  cursor: (!newUser.name || !newUser.email || (!editingUser && !newUser.password)) ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  opacity: (!newUser.name || !newUser.email || (!editingUser && !newUser.password)) ? 0.5 : 1,
+                  transition: 'opacity 0.2s'
+                }}
+              >
                 {editingUser ? 'Update' : 'Add'} User
               </button>
             </div>

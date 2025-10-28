@@ -35,7 +35,7 @@ export async function PUT(
 ) {
   try {
     const assetId = parseInt(params.id)
-    const { name, description, sku, condition, qty_in, qty_out, unit_price, threshold } = await request.json()
+    const { name, description, sku, condition, qty_in, qty_out, unit_price, threshold, performedBy } = await request.json()
 
     const existingAsset = await prisma.assets.findUnique({
       where: { id: assetId }
@@ -63,6 +63,23 @@ export async function PUT(
       where: { id: assetId },
       data: updateData
     })
+
+    // Log transaction for updating asset
+    try {
+      const transaction = await prisma.transaction.create({
+        data: {
+          itemid: assetId,
+          itemname: asset.name,
+          type: 'update',
+          quantity: 1,
+          user: performedBy || 'system',
+          reason: 'Asset updated'
+        }
+      })
+      console.log('Transaction created successfully:', transaction.id)
+    } catch (error) {
+      console.error('Error creating transaction:', error)
+    }
 
     return NextResponse.json({
       message: 'Asset updated successfully',

@@ -62,6 +62,10 @@ export default function AdminDashboard() {
       const usersResponse = await fetch('/api/users');
       const usersData = usersResponse.ok ? await usersResponse.json() : [];
 
+      // Load transactions data
+      const transactionsResponse = await fetch('/api/transactions');
+      const transactionsData = transactionsResponse.ok ? await transactionsResponse.json() : [];
+
       // Calculate stats
       const lowInventoryStock = inventoryData.filter((item: any) => item.balanceqty <= item.threshold).length;
       const lowAssetStock = assetsData.filter((asset: any) => asset.balance_qty <= asset.threshold).length;
@@ -71,7 +75,7 @@ export default function AdminDashboard() {
         totalAssetItems: assetsData.length,
         lowInventoryStock,
         lowAssetStock,
-        todaysTransactions: 0, // Mock for now
+        todaysTransactions: transactionsData.length,
       });
       setTotalUsers(usersData.length);
     } catch (error) {
@@ -202,11 +206,11 @@ export default function AdminDashboard() {
         >
           <div className="mat-card-header">
             <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📋</div>
-            <h3>Today's Transactions</h3>
+            <h3>Total Transactions</h3>
           </div>
           <div className="mat-card-content">
             <div className="card-value">{stats.todaysTransactions}</div>
-            <div className="card-subtext">Activities today</div>
+            <div className="card-subtext">All transactions</div>
           </div>
         </div>
       </div>
