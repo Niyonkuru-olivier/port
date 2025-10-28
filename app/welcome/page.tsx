@@ -5,8 +5,11 @@ export default function Home() {
   return (
     <div className="host">
       <div className="container">
-        <h1>Welcome to Stock Management System</h1>
-        <p>Manage your stock efficiently with our powerful tools.</p>
+        <h3>🏢 Welcome to StoreMIS – MININFRA</h3>
+        <p>StoreMIS streamlines MININFRA’s daily store operations
+        through efficient stock tracking and transparent management.
+        </p>
+          
         <div className="buttons">
           <Link href="/login" id="loginBtn">
             Login

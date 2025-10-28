@@ -25,6 +25,7 @@ export default function AdminAssetManagement() {
   const [assets, setAssets] = useState<Asset[]>([])
   const [filteredAssets, setFilteredAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
@@ -103,34 +104,88 @@ export default function AdminAssetManagement() {
   }
 
   const handleAddAsset = async () => {
+    if (saving) return
+    setSaving(true)
     try {
-      const response = await fetch('/api/assets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newAsset)
-      })
-
-      if (response.ok) {
-        await loadAssets()
-        setShowAddDialog(false)
-        setNewAsset({
-          number: '',
-          name: '',
-          description: '',
-          sku: '',
-          condition: 'Good',
-          qty_in: 0,
-          qty_out: 0,
-          unit_price: 0,
-          threshold: 5
+      if (editingAsset) {
+        // Update existing asset
+        const response = await fetch(`/api/assets/${editingAsset.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: newAsset.name,
+            description: newAsset.description,
+            sku: newAsset.sku,
+            condition: newAsset.condition,
+            qty_in: newAsset.qty_in,
+            qty_out: newAsset.qty_out,
+            unit_price: newAsset.unit_price,
+            threshold: newAsset.threshold
+          })
         })
-        alert('Asset added successfully!')
+
+        if (response.ok) {
+          await loadAssets()
+          setShowAddDialog(false)
+          setEditingAsset(null)
+          setNewAsset({
+            number: '',
+            name: '',
+            description: '',
+            sku: '',
+            condition: 'Good',
+            qty_in: 0,
+            qty_out: 0,
+            unit_price: 0,
+            threshold: 5
+          })
+          alert('Asset updated successfully!')
+        } else {
+          const err = await response.json().catch(() => ({}))
+          alert(err.message || 'Failed to update asset')
+        }
       } else {
-        alert('Failed to add asset')
+        // Add new asset
+        const response = await fetch('/api/assets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: newAsset.name,
+            description: newAsset.description,
+            sku: newAsset.sku,
+            condition: newAsset.condition,
+            qty_in: newAsset.qty_in,
+            qty_out: newAsset.qty_out,
+            unit_price: newAsset.unit_price,
+            threshold: newAsset.threshold
+          })
+        })
+
+        if (response.ok) {
+          await loadAssets()
+          setShowAddDialog(false)
+          setNewAsset({
+            number: '',
+            name: '',
+            description: '',
+            sku: '',
+            condition: 'Good',
+            qty_in: 0,
+            qty_out: 0,
+            unit_price: 0,
+            threshold: 5
+          })
+          alert('Asset added successfully!')
+        } else {
+          const err = await response.json().catch(() => ({}))
+          alert(err.message || 'Failed to add asset')
+        }
       }
     } catch (error) {
-      console.error('Error adding asset:', error)
-      alert('Error adding asset')
+      console.error('Error saving asset:', error)
+      alert('Error saving asset')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -249,16 +304,17 @@ export default function AdminAssetManagement() {
             <h2>{editingAsset ? 'Edit Asset' : 'Add New Asset'}</h2>
 
             <form className="dialog-form" onSubmit={(e) => e.preventDefault()}>
-              <div className="full-width">
-                <label>Asset Number</label>
-                <input
-                  type="text"
-                  value={newAsset.number}
-                  onChange={(e) => setNewAsset({...newAsset, number: e.target.value})}
-                  placeholder="Enter asset number"
-                  required
-                />
-              </div>
+              {editingAsset && (
+                <div className="full-width">
+                  <label>Asset Number</label>
+                  <input
+                    type="text"
+                    value={newAsset.number}
+                    readOnly
+                    style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+                  />
+                </div>
+              )}
 
               <div className="full-width">
                 <label>Asset Name</label>
@@ -362,9 +418,9 @@ export default function AdminAssetManagement() {
                 type="button"
                 className="primary"
                 onClick={handleAddAsset}
-                disabled={!newAsset.number || !newAsset.name || !newAsset.sku || newAsset.qty_in <= 0 || newAsset.unit_price <= 0}
+                disabled={saving || !newAsset.name || !newAsset.sku || newAsset.qty_in < 0 || newAsset.unit_price < 0}
               >
-                {editingAsset ? 'Update' : 'Save'}
+                {saving ? (editingAsset ? 'Updating...' : 'Saving...') : (editingAsset ? 'Update' : 'Save')}
               </button>
             </div>
           </div>

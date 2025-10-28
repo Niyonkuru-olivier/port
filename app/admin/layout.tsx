@@ -19,6 +19,7 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const [activeMenu, setActiveMenu] = useState('dashboard')
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
 
@@ -36,9 +37,16 @@ export default function AdminLayout({
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    router.push('/login')
+    setShowLogoutDialog(true)
+  }
+
+  const confirmLogout = (confirmed: boolean) => {
+    setShowLogoutDialog(false)
+    if (confirmed) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      router.push('/login')
+    }
   }
 
   return (
@@ -72,6 +80,54 @@ export default function AdminLayout({
       <div className="main-content">
         {children}
       </div>
+
+      {/* Logout Confirmation Dialog */}
+      {showLogoutDialog && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '8px',
+            width: '400px',
+            padding: '20px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+          }}>
+            <h2 style={{ marginTop: 0, marginBottom: '20px' }}>Confirm Logout</h2>
+            <p>Are you sure you want to log out?</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <button
+                onClick={() => confirmLogout(false)}
+                style={{ marginRight: '8px', padding: '8px 16px', borderRadius: '4px', border: '1px solid #ccc', backgroundColor: '#fff', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => confirmLogout(true)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  backgroundColor: '#4361ee',
+                  color: '#fff',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -21,27 +21,34 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { number, name, description, sku, condition, qty_in, qty_out, balance_qty, unit_price, total_price, threshold } = await request.json()
+    const { name, description, sku, condition, qty_in, qty_out, unit_price, threshold } = await request.json()
 
-    if (!number || !name || !sku || !condition || qty_in === undefined || unit_price === undefined) {
+    if (!name || !sku || !condition || qty_in === undefined || unit_price === undefined) {
       return NextResponse.json(
-        { message: 'Number, name, sku, condition, qty_in, and unit_price are required' },
+        { message: 'Name, sku, condition, qty_in, and unit_price are required' },
         { status: 400 }
       )
     }
 
+    // Auto-generate asset number
+    const lastAsset = await prisma.assets.findFirst({
+      orderBy: { id: 'desc' }
+    })
+    
+    const nextNumber = lastAsset ? 
+      `AST-${String(parseInt(lastAsset.number.split('-')[1]) + 1).padStart(4, '0')}` : 
+      'AST-0001'
+
     const asset = await prisma.assets.create({
       data: {
-        number,
+        number: nextNumber,
         name,
         description: description || null,
         sku,
         condition,
         qty_in: parseInt(qty_in),
         qty_out: parseInt(qty_out) || 0,
-        balance_qty: parseInt(balance_qty) || parseInt(qty_in),
         unit_price: parseFloat(unit_price),
-        total_price: parseFloat(total_price) || (parseFloat(unit_price) * parseInt(qty_in)),
         threshold: parseInt(threshold) || 5
       }
     })

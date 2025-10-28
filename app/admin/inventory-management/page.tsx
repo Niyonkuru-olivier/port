@@ -104,41 +104,76 @@ export default function AdminInventoryManagement() {
 
   const handleAddItem = async () => {
     try {
-      // Auto-generate item number
-      const itemNumber = `INV-${String(inventory.length + 1).padStart(4, '0')}`
-      
-      const response = await fetch('/api/inventory', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...newItem,
-          number: itemNumber,
-          qtyin: newItem.qty_in,
-          qtyout: newItem.qty_out,
-          unitprice: newItem.unit_price,
+      if (editingItem) {
+        // Update existing item
+        const response = await fetch(`/api/inventory/${editingItem.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: newItem.name,
+            description: newItem.description,
+            condition: newItem.condition,
+            qtyin: newItem.qty_in,
+            qtyout: newItem.qty_out,
+            unitprice: newItem.unit_price,
+            threshold: newItem.threshold
+          })
         })
-      })
 
-      if (response.ok) {
-        await loadInventory()
-        setShowAddDialog(false)
-        setEditingItem(null)
-        setNewItem({
-          name: '',
-          description: '',
-          condition: 'Good',
-          qty_in: 0,
-          qty_out: 0,
-          unit_price: 0,
-          threshold: 5
-        })
-        alert('Item added successfully!')
+        if (response.ok) {
+          await loadInventory()
+          setShowAddDialog(false)
+          setEditingItem(null)
+          setNewItem({
+            name: '',
+            description: '',
+            condition: 'Good',
+            qty_in: 0,
+            qty_out: 0,
+            unit_price: 0,
+            threshold: 5
+          })
+          alert('Item updated successfully!')
+        } else {
+          alert('Failed to update item')
+        }
       } else {
-        alert('Failed to add item')
+        // Add new item
+        const itemNumber = `INV-${String(inventory.length + 1).padStart(4, '0')}`
+        
+        const response = await fetch('/api/inventory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...newItem,
+            number: itemNumber,
+            qtyin: newItem.qty_in,
+            qtyout: newItem.qty_out,
+            unitprice: newItem.unit_price,
+          })
+        })
+
+        if (response.ok) {
+          await loadInventory()
+          setShowAddDialog(false)
+          setEditingItem(null)
+          setNewItem({
+            name: '',
+            description: '',
+            condition: 'Good',
+            qty_in: 0,
+            qty_out: 0,
+            unit_price: 0,
+            threshold: 5
+          })
+          alert('Item added successfully!')
+        } else {
+          alert('Failed to add item')
+        }
       }
     } catch (error) {
-      console.error('Error adding item:', error)
-      alert('Error adding item')
+      console.error('Error saving item:', error)
+      alert('Error saving item')
     }
   }
 

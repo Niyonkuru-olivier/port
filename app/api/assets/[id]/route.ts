@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
+    const assetId = parseInt(params.id)
+    
     const asset = await prisma.assets.findUnique({
-      where: { id: parseInt(params.id) }
+      where: { id: assetId }
     })
 
     if (!asset) {
@@ -24,34 +29,44 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { name, description, condition, qty_in, qty_out, unit_price, threshold } = await request.json()
+    const assetId = parseInt(params.id)
+    const { name, description, sku, condition, qty_in, qty_out, unit_price, threshold } = await request.json()
 
-    if (!name || qty_in === undefined || unit_price === undefined) {
+    const existingAsset = await prisma.assets.findUnique({
+      where: { id: assetId }
+    })
+
+    if (!existingAsset) {
       return NextResponse.json(
-        { message: 'Name, qty_in, and unit_price are required' },
-        { status: 400 }
+        { message: 'Asset not found' },
+        { status: 404 }
       )
     }
 
-    const updatedAsset = await prisma.assets.update({
-      where: { id: parseInt(params.id) },
-      data: {
-        name,
-        description: description || null,
-        condition,
-        qty_in: parseInt(qty_in),
-        qty_out: parseInt(qty_out) || 0,
-        unit_price: parseFloat(unit_price),
-        threshold: parseInt(threshold) || 5
-        // balance_qty and total_price are generated columns, so we don't update them directly
-      }
+    const updateData: any = {}
+    
+    if (name) updateData.name = name
+    if (description !== undefined) updateData.description = description
+    if (sku) updateData.sku = sku
+    if (condition) updateData.condition = condition
+    if (qty_in !== undefined) updateData.qty_in = parseInt(qty_in)
+    if (qty_out !== undefined) updateData.qty_out = parseInt(qty_out)
+    if (unit_price !== undefined) updateData.unit_price = parseFloat(unit_price)
+    if (threshold !== undefined) updateData.threshold = parseInt(threshold)
+
+    const asset = await prisma.assets.update({
+      where: { id: assetId },
+      data: updateData
     })
 
     return NextResponse.json({
       message: 'Asset updated successfully',
-      asset: updatedAsset
+      asset
     })
   } catch (error) {
     console.error('Error updating asset:', error)
@@ -62,10 +77,26 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
+    const assetId = parseInt(params.id)
+
+    const existingAsset = await prisma.assets.findUnique({
+      where: { id: assetId }
+    })
+
+    if (!existingAsset) {
+      return NextResponse.json(
+        { message: 'Asset not found' },
+        { status: 404 }
+      )
+    }
+
     await prisma.assets.delete({
-      where: { id: parseInt(params.id) }
+      where: { id: assetId }
     })
 
     return NextResponse.json({

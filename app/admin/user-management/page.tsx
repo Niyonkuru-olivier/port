@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import '../../admin-dashboard/user-management/user-management.component.scss'
 
 interface User {
   id: number
+  name: string
   email: string
   role: string
   status: string
@@ -17,6 +19,14 @@ export default function AdminUserManagement() {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showAddDialog, setShowAddDialog] = useState(false)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'user'
+  })
   const router = useRouter()
 
   useEffect(() => {
@@ -55,6 +65,107 @@ export default function AdminUserManagement() {
     }
   }
 
+  const handleAddUser = async () => {
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser)
+      })
+
+      if (response.ok) {
+        await loadUsers()
+        setShowAddDialog(false)
+        setNewUser({
+          name: '',
+          email: '',
+          password: '',
+          role: 'user'
+        })
+        alert('User added successfully!')
+      } else {
+        const error = await response.json()
+        alert(error.message || 'Failed to add user')
+      }
+    } catch (error) {
+      console.error('Error adding user:', error)
+      alert('Error adding user')
+    }
+  }
+
+  const toggleUserStatus = async (userId: number, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active'
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      })
+
+      if (response.ok) {
+        await loadUsers()
+        alert(`User ${newStatus.toLowerCase()} successfully!`)
+      } else {
+        alert('Failed to update user status')
+      }
+    } catch (error) {
+      console.error('Error updating user status:', error)
+      alert('Error updating user status')
+    }
+  }
+
+  const editUser = (user: User) => {
+    setEditingUser(user)
+    setNewUser({
+      name: user.name,
+      email: user.email,
+      password: '',
+      role: user.role
+    })
+    setShowAddDialog(true)
+  }
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return
+
+    try {
+      const updateData: any = {
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role
+      }
+
+      if (newUser.password) {
+        updateData.password = newUser.password
+      }
+
+      const response = await fetch(`/api/users/${editingUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      })
+
+      if (response.ok) {
+        await loadUsers()
+        setShowAddDialog(false)
+        setEditingUser(null)
+        setNewUser({
+          name: '',
+          email: '',
+          password: '',
+          role: 'user'
+        })
+        alert('User updated successfully!')
+      } else {
+        const error = await response.json()
+        alert(error.message || 'Failed to update user')
+      }
+    } catch (error) {
+      console.error('Error updating user:', error)
+      alert('Error updating user')
+    }
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
@@ -62,14 +173,15 @@ export default function AdminUserManagement() {
   }
 
   const filteredUsers = users.filter(user => 
+    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.role.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div>Loading...</div>
       </div>
     )
   }
@@ -79,128 +191,113 @@ export default function AdminUserManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-              <p className="text-gray-600">Admin Panel</p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/admin/dashboard" className="text-blue-600 hover:text-blue-800">
-                ← Back to Dashboard
-              </Link>
-              <span className="text-gray-700">Welcome, {user.email}</span>
-              <button
-                onClick={handleLogout}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+    <div className="user-management">
+      <h2>User Management</h2>
+
+      <div className="search-container">
+        <input
+          className="search-field"
+          type="text"
+          placeholder="Search by name, email or role"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
+      <button onClick={() => setShowAddDialog(true)}>
+        Add User
+      </button>
+
+      {filteredUsers.length === 0 ? (
+        <div style={{ marginTop: 16 }}>No users found.</div>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Email</th>
+              <th>Status</th>
+              <th>Created At</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredUsers.map((userItem) => (
+              <tr key={userItem.id}>
+                <td>{userItem.id}</td>
+                <td>{userItem.name}</td>
+                <td>{userItem.role}</td>
+                <td>{userItem.email}</td>
+                <td>
+                  <span className={userItem.status === 'Active' ? 'badge-success' : 'badge-danger'}>
+                    {userItem.status}
+                  </span>
+                </td>
+                <td>{userItem.created_at ? new Date(userItem.created_at).toLocaleDateString() : ''}</td>
+                <td>
+                  <button onClick={() => editUser(userItem)} style={{ marginRight: 8 }}>Edit</button>
+                  <button onClick={() => toggleUserStatus(userItem.id, userItem.status)}>
+                    {userItem.status === 'Active' ? 'Deactivate' : 'Activate'}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {showAddDialog && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+        }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: 8, width: '90%', maxWidth: 500, padding: 24 }}>
+            <h3>{editingUser ? 'Edit User' : 'Add User'}</h3>
+            <form>
+              <input
+                placeholder="Full Name"
+                value={newUser.name}
+                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                required
+              />
+              <input
+                type="email"
+                placeholder="Email Address"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                required
+              />
+              <input
+                type="password"
+                placeholder={editingUser ? 'New Password (optional)' : 'Password'}
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                required={!editingUser}
+              />
+              <select
+                value={newUser.role}
+                onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                required
               >
-                Logout
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+            </form>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+              <button onClick={() => {
+                setShowAddDialog(false)
+                setEditingUser(null)
+                setNewUser({ name: '', email: '', password: '', role: 'user' })
+              }}>Cancel</button>
+              <button onClick={editingUser ? handleUpdateUser : handleAddUser} disabled={!newUser.name || !newUser.email || (!editingUser && !newUser.password)}>
+                {editingUser ? 'Update' : 'Add'} User
               </button>
             </div>
           </div>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <div className="px-4 py-5 sm:px-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">Users</h3>
-                <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                  Add New User
-                </button>
-              </div>
-              
-              <div className="mb-4">
-                <input
-                  type="text"
-                  placeholder="Search users..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                />
-              </div>
-            </div>
-            
-            <div className="border-t border-gray-200">
-              {filteredUsers.length === 0 ? (
-                <div className="px-4 py-5 sm:px-6 text-center">
-                  <p className="text-gray-500">No users found.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          ID
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Email
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Role
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Created At
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredUsers.map((userItem) => (
-                        <tr key={userItem.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {userItem.id}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {userItem.email}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              userItem.role === 'admin' 
-                                ? 'bg-purple-100 text-purple-800' 
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {userItem.role}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              userItem.status === 'Activated' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {userItem.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {new Date(userItem.created_at).toLocaleDateString()}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button className="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
-                            <button className="text-red-600 hover:text-red-900">Deactivate</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </main>
+      )}
     </div>
   )
 }
