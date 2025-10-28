@@ -1,11 +1,14 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import styles from '../admin-dashboard/reset-password/reset-password.module.css'
 
-export default function ResetPasswordPage() {
+export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
+
+function ResetPasswordForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -84,62 +87,35 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className={styles.resetPasswordContainer}>
+    <>
       {errorMessage && !email && !resetToken ? (
         <form>
           <h2>Reset Your Password</h2>
           <p className={styles.error}>{errorMessage}</p>
-          <Link href="/login">
-            ← Back to Login
-          </Link>
+          <Link href="/login">← Back to Login</Link>
         </form>
       ) : (
         <form onSubmit={submitReset}>
           <h2>Reset Your Password</h2>
-
-          <input 
-            type="email" 
-            value={email} 
-            readOnly 
-            placeholder="Email"
-            style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
-          />
-          
-          <input
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="Enter new password"
-            required
-            minLength={6}
-          />
-          
-          <input
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Confirm new password"
-            required
-            minLength={6}
-          />
-          
-          <button type="submit" disabled={loading}>
-            {loading ? 'Resetting...' : 'Reset Password'}
-          </button>
-
-          {errorMessage && (
-            <p className={styles.error}>{errorMessage}</p>
-          )}
-          
-          {successMessage && (
-            <p className={styles.success}>{successMessage}</p>
-          )}
-
-          <Link href="/login">
-            ← Back to Login
-          </Link>
+          <input type="email" value={email} readOnly placeholder="Email" style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }} />
+          <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Enter new password" required minLength={6} />
+          <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" required minLength={6} />
+          <button type="submit" disabled={loading}>{loading ? 'Resetting...' : 'Reset Password'}</button>
+          {errorMessage && (<p className={styles.error}>{errorMessage}</p>)}
+          {successMessage && (<p className={styles.success}>{successMessage}</p>)}
+          <Link href="/login">← Back to Login</Link>
         </form>
       )}
+    </>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <div className={styles.resetPasswordContainer}>
+      <Suspense fallback={<form><h2>Reset Your Password</h2><div>Loading…</div></form>}>
+        <ResetPasswordForm />
+      </Suspense>
     </div>
   )
 }
