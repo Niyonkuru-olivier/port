@@ -35,40 +35,41 @@ export async function POST(request: NextRequest) {
     const filename = `asset-report-${Date.now()}.pdf`
     const filePath = path.join(reportsDir, filename)
 
-    // Generate PDF report
-    const doc = new PDFDocument({ margin: 50, size: 'A4' })
+    // Generate PDF report (match Jasper margins)
+    const doc = new PDFDocument({ margin: 20, size: 'A4' })
     const stream = fs.createWriteStream(filePath)
     doc.pipe(stream)
 
     // Logo path - UPDATE THIS PATH based on where you place logo.png
     const logoPath = path.join(process.cwd(), 'public', 'assets', 'logo.png')
 
-    // Header
-    doc.fontSize(16).text('Republic of Rwanda', { align: 'center' })
-    
-    // Add logo if it exists
+    // Header (positions approximated to Jasper band)
     if (fs.existsSync(logoPath)) {
-      const logoY = (doc as any).y + 10
-      doc.image(logoPath, 50, logoY, { width: 80 })
+      const logoWidth = 70
+      const logoX = doc.page.margins.left + 10
+      const logoY = doc.page.margins.top
+      doc.image(logoPath, logoX, logoY, { width: logoWidth, height: logoWidth })
     }
-    
-    doc.moveDown(6)
+    doc.fontSize(12).font('Helvetica-Bold').text('Republic of Rwanda', { align: 'center' })
+    doc.moveDown(0.2)
+    doc.fontSize(12).font('Helvetica-Bold').text('MINISTRY OF INFRASTRUCTURE', { align: 'center' })
+    doc.fontSize(10).font('Helvetica').text('P.O.BOX 24 KIGALI | E-mail: info@mininfra.gov.rw', { align: 'center' })
     doc.fontSize(12).text('MINISTRY OF INFRASTRUCTURE')
     doc.fontSize(11).text('P.O.BOX 24 KIGALI', { underline: true })
     doc.fontSize(8).text('E-mail: info@mininfra.gov.rw')
 
-    const currentDate = new Date().toLocaleDateString()
+    const now = new Date()
+    const reportDate = new Intl.DateTimeFormat('en-US').format(now) // M/d/yyyy like 7/25/2025
+    const doneDate = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(now)
     doc.moveDown(2)
-    doc.fontSize(13).text('ASSET REPORT AS AT ' + currentDate, {
-      align: 'center',
-      underline: true,
-    })
+    doc.moveDown(0.5)
+    doc.font('Helvetica-Bold').fontSize(14).text('ASSET REPORT AS AT ' + reportDate, { align: 'center' })
     doc.moveDown(2)
 
-    // Table headers
+    // Table headers (widths matched to Jasper layout)
     const headers = ['No', 'Name', 'Description', 'Qty In', 'Qty Out', 'Balance Qty', 'Unit Price(RWF)', 'Total Price(RWF)']
-    const colWidths = [30, 80, 100, 50, 50, 60, 60, 60]
-    const startX = 50
+    const colWidths = [30, 100, 120, 50, 50, 60, 70, 75]
+    const startX = doc.page.margins.left
     let y = (doc as any).y
     const rowHeight = 30
 
@@ -118,13 +119,18 @@ export async function POST(request: NextRequest) {
     // Grand total line
     y += 10
     const grandTotal = assetItems.reduce((sum, item) => {
-      const unitPrice = Number(item.unit_price) || 0
-      const balanceQty = Number(item.balance_qty) || 0
-      return sum + (unitPrice * balanceQty)
+      const total = item.total_price != null ? Number(item.total_price) : (Number(item.unit_price) || 0) * (Number(item.balance_qty) || 0)
+      return sum + total
     }, 0)
 
+    // Position like Jasper: label at x=380, value at x=480 (relative to left margin)
+    const labelX = doc.page.margins.left + 380
+    const valueX = doc.page.margins.left + 480
     doc.font('Helvetica-Bold').fontSize(10)
-    doc.text(`Grand Total: ${grandTotal.toFixed(2)} RWF`, startX, y)
+    doc.text('Grand Total:', labelX, y)
+    doc.font('Helvetica').text(`${grandTotal.toFixed(2)} RWF`, valueX, y)
+
+    // Jasper summary does not include location/date line by default
 
     // Footer signatories
     doc.moveDown(6)

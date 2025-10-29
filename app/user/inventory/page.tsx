@@ -29,6 +29,7 @@ export default function UserInventory() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null)
+  const [editMode, setEditMode] = useState<'add' | 'remove' | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -205,9 +206,19 @@ export default function UserInventory() {
                   <td>
                     <button
                       className="edit-btn"
-                      onClick={() => editItem(item)}
+                      title="Add to stock"
+                      onClick={() => { setEditMode('add'); editItem(item) }}
+                      style={{ fontSize: '20px', fontWeight: 'bold' }}
                     >
-                      ✎
+                      +
+                    </button>
+                    <button
+                      className="edit-btn"
+                      style={{ marginLeft: 6, fontSize: '20px', fontWeight: 'bold' }}
+                      title="Remove from stock"
+                      onClick={() => { setEditMode('remove'); editItem(item) }}
+                    >
+                      -
                     </button>
                   </td>
                 </tr>
@@ -224,8 +235,9 @@ export default function UserInventory() {
       {editingItem && (
         <EditInventoryDialog
           item={editingItem}
-          onClose={() => setEditingItem(null)}
+          onClose={() => { setEditingItem(null); setEditMode(null) }}
           onSave={handleItemSave}
+          mode={editMode || undefined}
         />
       )}
     </div>

@@ -29,6 +29,7 @@ export default function UserAssets() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null)
+  const [editMode, setEditMode] = useState<'add' | 'remove' | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -200,9 +201,19 @@ export default function UserAssets() {
                   <td>
                     <button
                       className="edit-btn"
-                      onClick={() => editAsset(asset)}
+                      title="Add to stock"
+                      onClick={() => { setEditMode('add'); editAsset(asset) }}
+                      style={{ fontSize: '20px', fontWeight: 'bold' }}
                     >
-                      ✎
+                      +
+                    </button>
+                    <button
+                      className="edit-btn"
+                      style={{ marginLeft: 6, fontSize: '20px', fontWeight: 'bold' }}
+                      title="Remove from stock"
+                      onClick={() => { setEditMode('remove'); editAsset(asset) }}
+                    >
+                      -
                     </button>
                   </td>
                 </tr>
@@ -219,8 +230,9 @@ export default function UserAssets() {
       {editingAsset && (
         <EditAssetDialog
           asset={editingAsset}
-          onClose={() => setEditingAsset(null)}
+          onClose={() => { setEditingAsset(null); setEditMode(null) }}
           onSave={handleAssetSave}
+          mode={editMode || undefined}
         />
       )}
     </div>

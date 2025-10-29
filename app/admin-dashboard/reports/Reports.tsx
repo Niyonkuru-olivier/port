@@ -1,5 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import ReportDialog from '../report-dialog/ReportDialog';
+import React, { useEffect, useState } from 'react';
 
 type ReportType = 'inventory' | 'asset';
 type FormatType = 'pdf' | 'xlsx' | 'csv';
@@ -37,8 +36,8 @@ const Reports: React.FC = () => {
   const loadData = async () => {
     try {
       const url = selectedReportType === 'inventory'
-        ? '/api/inventory'  // replace with your API
-        : '/api/assets';
+        ? '/api/reports/inventory-items'
+        : '/api/reports/asset-items';
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch report data');

@@ -21,9 +21,10 @@ interface EditInventoryDialogProps {
   item: InventoryItem | null
   onClose: () => void
   onSave: (item: InventoryItem) => void
+  mode?: 'add' | 'remove'
 }
 
-const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose, onSave }) => {
+const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose, onSave, mode }) => {
   const [formData, setFormData] = useState<InventoryItem>(
     item || {
       id: 0,
@@ -146,6 +147,7 @@ const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose
               value={formData.name}
               onChange={handleChange}
               required
+              disabled={mode === 'add' || mode === 'remove'}
             />
           </div>
 
@@ -185,6 +187,7 @@ const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose
               value={formData.qty_in}
               onChange={handleChange}
               required
+              disabled={mode === 'remove'}
             />
           </div>
 
@@ -197,6 +200,7 @@ const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose
               min={0}
               value={formData.qty_out}
               onChange={handleChange}
+              disabled={mode === 'add'}
             />
           </div>
 
@@ -224,6 +228,7 @@ const EditInventoryDialog: React.FC<EditInventoryDialogProps> = ({ item, onClose
               value={formData.threshold}
               onChange={handleChange}
               required
+              disabled={mode === 'add' || mode === 'remove'}
             />
           </div>
 

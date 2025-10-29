@@ -21,9 +21,10 @@ interface EditAssetDialogProps {
   asset: Asset | null
   onClose: () => void
   onSave: (asset: Asset) => void
+  mode?: 'add' | 'remove'
 }
 
-const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ asset, onClose, onSave }) => {
+const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ asset, onClose, onSave, mode }) => {
   const [formData, setFormData] = useState<Asset>(
     asset || {
       id: 0,
@@ -134,7 +135,7 @@ const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ asset, onClose, onSav
               name="number"
               value={formData.number}
               onChange={handleChange}
-              disabled
+              disabled={true}
             />
           </div>
 
@@ -146,6 +147,7 @@ const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ asset, onClose, onSav
               value={formData.name}
               onChange={handleChange}
               required
+              disabled={mode === 'add' || mode === 'remove'}
             />
           </div>
 
@@ -156,7 +158,7 @@ const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ asset, onClose, onSav
               name="sku"
               value={formData.sku}
               onChange={handleChange}
-              disabled
+              disabled={true}
             />
           </div>
 
@@ -186,18 +188,33 @@ const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ asset, onClose, onSav
             </select>
           </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>Quantity In</label>
-            <input
-              style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-              type="number"
-              name="qty_in"
-              min={0}
-              value={formData.qty_in}
-              onChange={handleChange}
-              required
-            />
-          </div>
+          {mode === 'remove' ? (
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>Quantity Out</label>
+              <input
+                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+                type="number"
+                name="qty_out"
+                min={0}
+                value={formData.qty_out}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          ) : (
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>Quantity In</label>
+              <input
+                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
+                type="number"
+                name="qty_in"
+                min={0}
+                value={formData.qty_in}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          )}
 
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>Unit Price (RWF)</label>
@@ -223,6 +240,7 @@ const EditAssetDialog: React.FC<EditAssetDialogProps> = ({ asset, onClose, onSav
               value={formData.threshold}
               onChange={handleChange}
               required
+              disabled={mode === 'add' || mode === 'remove'}
             />
           </div>
 
